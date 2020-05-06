@@ -51,7 +51,7 @@ class REParserSpec extends BaseSpec {
   }
 
   it should "give parentheses highest precedence" in {
-    REParser(RELexer("(a|b)*").right.get) shouldBe Right(StarAST(OrAST(CharAST('a'), CharAST('b'))))
+    REParser(RELexer("(a|b)*").right.get) shouldBe Right(StarAST(GroupAST(OrAST(CharAST('a'), CharAST('b')), 0)))
   }
 
   it should "give character classes higher precedence than operators" in {

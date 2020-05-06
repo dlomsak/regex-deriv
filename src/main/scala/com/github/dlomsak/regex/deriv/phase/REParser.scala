@@ -16,6 +16,14 @@ class RegexTokenReader(tokens: Seq[RegexToken]) extends Reader[RegexToken] {
 object REParser extends Parsers {
   override type Elem = RegexToken
 
+  private var groupCount = 0
+
+  def getGroupLabel(): Int = {
+    val count = groupCount
+    groupCount += 1
+    count.toInt
+  }
+
   def apply(tokens: Seq[RegexToken]): Either[RegexParserError, RegexAST] = {
     val reader = new RegexTokenReader(tokens)
     program(reader) match {
@@ -56,7 +64,7 @@ object REParser extends Parsers {
     (BACKSLASH ~> literal flatMap doEscape) |
     DOT ^^ { _ => CharClassAST.sigma } |
     charClass |
-    LPAREN ~> regex <~ RPAREN |
+    LPAREN ~> regex <~ RPAREN ^^ { case r => GroupAST(r, getGroupLabel()) } |
     TILDE ~> regex ^^ { case r => ComplementAST(r) }
 
   private def doEscape(c: CharAST): Parser[RegexAST] = c.c match {

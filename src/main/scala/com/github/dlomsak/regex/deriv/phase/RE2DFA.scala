@@ -1,6 +1,6 @@
 package com.github.dlomsak.regex.deriv.phase
 
-import com.github.dlomsak.regex.deriv.{CharClassAST, DFA, RegexAST}
+import com.github.dlomsak.regex.deriv.{CharClassAST, DFA, GroupAST, MatchAction, RegexAST}
 
 /**
   * Creates a DFA from a regular expression AST
@@ -8,7 +8,7 @@ import com.github.dlomsak.regex.deriv.{CharClassAST, DFA, RegexAST}
 
 object RE2DFA {
   type State = RegexAST
-  type Delta = Map[(State, CharClassAST), State]
+  type Delta = Map[(State, CharClassAST), (State, List[MatchAction])]
   type States = Set[State]
 
   private def goto(state: State)(st: (States, Delta), s: CharClassAST): (States, Delta) = {
@@ -28,11 +28,11 @@ object RE2DFA {
       // nonempty, inverted. Find a character in the class whose successor is not in it
       s.chars.map(_.toInt + 1).map(_.toChar).find(!s.chars.contains(_)).get
     }
-    val qc = state.derive(c)
+    val (qc, qacts) = state.derive(c)
     states.find(_.equals(qc)).map { qPrime =>
-      (states, delta + ((state, s) -> qc))
+      (states, delta + ((state, s) -> (qc, qacts)))
     } getOrElse {
-      explore(states + qc, delta + ((state, s) -> qc), qc)
+      explore(states + qc, delta + ((state, s) -> (qc, qacts)), qc)
     }
   }
 
@@ -45,9 +45,9 @@ object RE2DFA {
     // label states numerically rather than by regex
     val nStates = states.zipWithIndex.toMap
     val nStatesS = nStates.map { case (k, v) => (k.toString, v) }
-    val nDelta = delta.map { case ((s1, cc), s2) => ((nStatesS(s1.toString), cc), nStatesS(s2.toString)) }
+    val nDelta = delta.map { case ((s1, cc), (s2, t2)) => ((nStatesS(s1.toString), cc), (nStatesS(s2.toString), t2)) }
     // compute state -> (charClass, nextState) structure for DFA because we can't directly do Map lookups on char classes
-    val nDeltaSt = nDelta.toList.map{case ((s1, cc), s2) => (s1, (cc, s2))}.groupBy(_._1).mapValues(_.map(_._2))
+    val nDeltaSt = nDelta.toList.map{case ((s1, cc), (s2, t2)) => (s1, (cc, s2, t2))}.groupBy(_._1).mapValues(_.map(_._2))
     DFA(nStates.values.toSet, nStates(r), accepting.map(nStates), nDeltaSt)
   }
 
