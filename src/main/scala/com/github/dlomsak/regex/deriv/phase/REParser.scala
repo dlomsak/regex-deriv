@@ -12,39 +12,47 @@ class RegexTokenReader(tokens: Seq[RegexToken]) extends Reader[RegexToken] {
   override def rest: Reader[RegexToken] = new RegexTokenReader(tokens.tail)
 }
 
+final class ParseContext {
+  var count = 0
+  var groupStack = List.empty[Int]
+
+  def pushGroup(): ParseContext = {
+    groupStack = count :: groupStack
+    count += 1
+    this
+  }
+
+  def popGroup(): Int = {
+    val head = groupStack.head
+    groupStack = groupStack.tail
+    head
+  }
+}
 
 object REParser extends Parsers {
   override type Elem = RegexToken
 
-  private var groupCount = 0
-
-  def getGroupLabel(): Int = {
-    val count = groupCount
-    groupCount += 1
-    count.toInt
-  }
-
   def apply(tokens: Seq[RegexToken]): Either[RegexParserError, RegexAST] = {
     val reader = new RegexTokenReader(tokens)
-    program(reader) match {
+    program(new ParseContext())(reader) match {
       case NoSuccess(msg, next) => Left(RegexParserError(msg))
       case Success(result, next) => Right(result)
       case Error(msg, next) => Left(RegexParserError(msg))
     }
   }
 
-  def program: Parser[RegexAST] = phrase(opt(regex)) ^^ { _.getOrElse(EmptyAST) }
+  def program(implicit ctx: ParseContext): Parser[RegexAST] = phrase(opt(regex)) ^^ { _.getOrElse(EmptyAST) }
 
-  def regex: Parser[RegexAST] =
+  def regex(implicit ctx: ParseContext): Parser[RegexAST] =
     term ~ opt((PIPE | AMPER) ~ regex) ^^ {
       case l ~ Some(PIPE ~ r) => OrAST(l, r)
       case l ~ Some(AMPER ~ r) => AndAST(l, r)
       case l ~ None => l
     }
 
-  def term: Parser[RegexAST] = rep1(factor) ^^ { _.reduceLeft(CatAST.apply) }
+  def term(implicit ctx: ParseContext): Parser[RegexAST] = rep1(factor) ^^ { _.reduceLeft(CatAST.apply) }
 
-  def factor: Parser[RegexAST] =  base ~ opt(STAR | PLUS | HOOK | quantifier) ^^ {
+  def factor(implicit ctx: ParseContext): Parser[RegexAST] =  base ~ opt(STAR | PLUS | HOOK | quantifier) ^^ {
       case r ~ Some(STAR) => StarAST(r)
       case r ~ Some(PLUS) => CatAST(r, StarAST(r))
       case r ~ Some(HOOK) => OrAST(r, EmptyAST)
@@ -59,15 +67,15 @@ object REParser extends Parsers {
       case r ~ None => r
   }
 
-  def base: Parser[RegexAST] =
+  def base(implicit ctx: ParseContext): Parser[RegexAST] =
     singleChar |
     (BACKSLASH ~> literal flatMap doEscape) |
     DOT ^^ { _ => CharClassAST.sigma } |
     charClass |
-    LPAREN ~> regex <~ RPAREN ^^ { case r => GroupAST(r, getGroupLabel()) } |
+    LPAREN ~> regex(ctx.pushGroup()) <~ RPAREN ^^ { case r => GroupAST(r,ctx.popGroup()) } |
     TILDE ~> regex ^^ { case r => ComplementAST(r) }
 
-  private def doEscape(c: CharAST): Parser[RegexAST] = c.c match {
+  private def doEscape(c: CharAST)(implicit ctx: ParseContext): Parser[RegexAST] = c.c match {
     case 't' => success(CharAST('\t'))
     case 'n' => success(CharAST('\n'))
     case 'r' => success(CharAST('\r'))
@@ -84,33 +92,33 @@ object REParser extends Parsers {
     case _ => err(s"invalid escape character '${c.c}'")
 }
 
-  def charClass: Parser[RegexAST] =
+  def charClass(implicit ctx: ParseContext): Parser[RegexAST] =
     LBRACKET ~> opt(CARET) ~ rep1(charRange) <~ RBRACKET ^^
       { case invert ~ chars => CharClassAST(chars.reduce(_ ++ _), invert.isDefined) }
 
-  def charRange: Parser[Set[Char]] = {
+  def charRange(implicit ctx: ParseContext): Parser[Set[Char]] = {
     literal ~ DASH ~ literal ^^ { case start ~ _ ~ stop => Set(start.c to stop.c:_*) } |
     singleChar ^^ { ch => Set(ch.c) }
   }
 
-  def singleChar: Parser[CharAST] =
+  def singleChar(implicit ctx: ParseContext): Parser[CharAST] =
     BACKSLASH ~> meta ^^ { x => CharAST(x.asChar) } |
     literal |
     digitLiteral
 
-  def meta: Parser[RegexToken] =
+  def meta(implicit ctx: ParseContext): Parser[RegexToken] =
     LPAREN | RPAREN | LBRACKET | RBRACKET | PLUS | STAR | HOOK | BACKSLASH | DOT | CARET | DASH | LBRACE | RBRACE | COMMA
 
-  def literal: Parser[CharAST] = accept("character literal", { case _ @ CHARLIT(c) => CharAST(c) })
+  def literal(implicit ctx: ParseContext): Parser[CharAST] = accept("character literal", { case _ @ CHARLIT(c) => CharAST(c) })
 
-  def digitLiteral: Parser[CharAST] = accept("digit lit", { case _ @ DIGITLIT(x) => CharAST(x) })
+  def digitLiteral(implicit ctx: ParseContext): Parser[CharAST] = accept("digit lit", { case _ @ DIGITLIT(x) => CharAST(x) })
 
-  def int: Parser[Int] = {
+  def int(implicit ctx: ParseContext): Parser[Int] = {
     rep1(accept("int lit", { case i @ DIGITLIT(x) => x})) ^^ { chars => chars.mkString.toInt }
   }
 
 
-  def quantifier: Parser[(Int, Option[Int])] = LBRACE ~> int ~ opt(COMMA) ~ opt(int) <~ RBRACE flatMap {
+  def quantifier(implicit ctx: ParseContext): Parser[(Int, Option[Int])] = LBRACE ~> int ~ opt(COMMA) ~ opt(int) <~ RBRACE flatMap {
     case i ~ Some(_) ~ j if i <= j.getOrElse(Int.MaxValue)  => success((i, j))
     case i ~ None ~ None => success((i, Some(i)))
     case i ~ Some(_) ~ Some(j) => err(s"In quantifier {m,n}, m is $i and n is $j, but m cannot be greater than n.")

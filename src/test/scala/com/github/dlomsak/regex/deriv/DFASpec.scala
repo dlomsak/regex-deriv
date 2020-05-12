@@ -11,4 +11,12 @@ class DFASpec extends BaseSpec {
       }
     }
   }
+
+  it should "group properly with *" in {
+    RegExpr("((abc)*)").right.get.consumeAll("abcabcabc").getMatches shouldBe List((0,0,8), (1,6,2), (0,0,5), (1,3,2), (0,0,2), (1,0,2))
+  }
+
+  it should "group properly with +" in {
+    RegExpr("((abc)+)").right.get.consumeAll("abcabcabc").getMatches shouldBe List((0,0,8), (1,6,2), (0,0,5), (1,3,2), (0,0,2), (1,0,2))
+  }
 }

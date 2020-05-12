@@ -22,6 +22,6 @@ Roadmap
 * ~~support quantification (e.g., "r{n, m}" matches n to m occurrences of r)~~
 * reimplement parser to remove backtracking
 * support group extraction
-* support named groups ala [Regular Expression Sub-matching using Partial Derivatives](http://www.home.hs-karlsruhe.de/~suma0002/publications/ppdp12-part-deriv-sub-match.pdf) by Martin Sulzmann and Kenny Zhuo Ming Lu
+* support named groups
 * support directives such as ?i for case insensitivity
 * performance testing against scala.util.matching.regex

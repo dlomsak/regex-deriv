@@ -1,6 +1,6 @@
 package com.github.dlomsak.regex.deriv.phase
 
-import com.github.dlomsak.regex.deriv.{CharClassAST, DFA, GroupAST, MatchAction, RegexAST}
+import com.github.dlomsak.regex.deriv.{CharClassAST, DFA, GroupAST, MatchContext, RegexAST}
 
 /**
   * Creates a DFA from a regular expression AST
@@ -8,10 +8,10 @@ import com.github.dlomsak.regex.deriv.{CharClassAST, DFA, GroupAST, MatchAction,
 
 object RE2DFA {
   type State = RegexAST
-  type Delta = Map[(State, CharClassAST), (State, List[MatchAction])]
+  type Delta = Map[(State, CharClassAST), (State, MatchContext)]
   type States = Set[State]
 
-  private def goto(state: State)(st: (States, Delta), s: CharClassAST): (States, Delta) = {
+  private def goto(state: State, openGroups: Set[Int])(st: (States, Delta), s: CharClassAST): (States, Delta) = {
     val (states, delta) = st
 
     // if the character class is empty, no transitions to make
@@ -28,19 +28,19 @@ object RE2DFA {
       // nonempty, inverted. Find a character in the class whose successor is not in it
       s.chars.map(_.toInt + 1).map(_.toChar).find(!s.chars.contains(_)).get
     }
-    val (qc, qacts) = state.derive(c)
+    val (qc, qctx) = state.derive(c, openGroups)
     states.find(_.equals(qc)).map { qPrime =>
-      (states, delta + ((state, s) -> (qc, qacts)))
+      (states, delta + ((state, s) -> (qPrime, qctx)))
     } getOrElse {
-      explore(states + qc, delta + ((state, s) -> (qc, qacts)), qc)
+      explore(states + qc, delta + ((state, s) -> (qc, qctx)), qc, qctx.openGroups ++ qctx.newGroups)
     }
   }
 
-  private def explore(states: States, delta: Delta, state: State): (States, Delta) =
-    state.getCharClasses.foldLeft((states, delta))(goto(state))
+  private def explore(states: States, delta: Delta, state: State, openGroups: Set[Int]): (States, Delta) =
+    state.getCharClasses.foldLeft((states, delta))(goto(state, openGroups))
 
   private def mkDFA(r: RegexAST): DFA[Int] = {
-    val (states, delta) = explore(Set(r), Map.empty, r)
+    val (states, delta) = explore(Set(r), Map.empty, r, Set.empty)
     val accepting = states.filter(_.acceptsEmpty)
     // label states numerically rather than by regex
     val nStates = states.zipWithIndex.toMap
