@@ -39,7 +39,7 @@ object RE2DFA {
   private def explore(states: States, delta: Delta, state: State, openGroups: Set[Int]): (States, Delta) =
     state.getCharClasses.foldLeft((states, delta))(goto(state, openGroups))
 
-  private def mkDFA(r: RegexAST): DFA[Int] = {
+  private def mkDFA(r: RegexAST, ctx: ParseContext): DFA[Int] = {
     val (states, delta) = explore(Set(r), Map.empty, r, Set.empty)
     val accepting = states.filter(_.acceptsEmpty)
     // label states numerically rather than by regex
@@ -48,8 +48,8 @@ object RE2DFA {
     val nDelta = delta.map { case ((s1, cc), (s2, t2)) => ((nStatesS(s1.toString), cc), (nStatesS(s2.toString), t2)) }
     // compute state -> (charClass, nextState) structure for DFA because we can't directly do Map lookups on char classes
     val nDeltaSt = nDelta.toList.map{case ((s1, cc), (s2, t2)) => (s1, (cc, s2, t2))}.groupBy(_._1).mapValues(_.map(_._2))
-    DFA(nStates.values.toSet, nStates(r), accepting.map(nStates), nDeltaSt)
+    DFA(nStates.values.toSet, nStates(r), accepting.map(nStates), nDeltaSt, ctx.getBindings)
   }
 
-  def apply(r: RegexAST): DFA[Int] = mkDFA(r)
+  def apply(r: RegexAST, ctx: ParseContext): DFA[Int] = mkDFA(r, ctx)
 }

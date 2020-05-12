@@ -6,6 +6,8 @@ A Scala regular expression implementation with derivative-based evaluation descr
 
 Normalizing constructor approach inspired from [this Scheme implementation](https://github.com/tmmcguire/scheme-regular-expression-derivatives/blob/master/dre.scm)
 
+Sub-expression matching takes ideas from [Regular Expression Sub-matching using Partial Derivatives](http://www.home.hs-karlsruhe.de/~suma0002/publications/ppdp12-part-deriv-sub-match.pdf) by Martin Sulzmann and Kenny Zhuo Ming Lu
+
 Goals
 -----
 The main goal is to provide a regex library that avoids backtracking and extra-regular features (e.g., back matching) to achieve stable performance without pathological cases. While the Thompson caching NFA construction is a well-known way to achieve this, the state space can get large. Finally, the lexer/parser should be extensible to support additional syntactic elements that expand into standard regular expressions.

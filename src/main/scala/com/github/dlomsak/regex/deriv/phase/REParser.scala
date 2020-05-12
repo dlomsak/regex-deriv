@@ -2,6 +2,7 @@ package com.github.dlomsak.regex.deriv.phase
 
 import com.github.dlomsak.regex.deriv._
 
+import scala.collection.mutable
 import scala.util.parsing.combinator.Parsers
 import scala.util.parsing.input.{NoPosition, Position, Reader}
 
@@ -13,8 +14,9 @@ class RegexTokenReader(tokens: Seq[RegexToken]) extends Reader[RegexToken] {
 }
 
 final class ParseContext {
-  var count = 0
-  var groupStack = List.empty[Int]
+  private var count = 0
+  private var groupStack = List.empty[Int]
+  private val bindings = mutable.Map.empty[String, Int]
 
   def pushGroup(): ParseContext = {
     groupStack = count :: groupStack
@@ -27,16 +29,24 @@ final class ParseContext {
     groupStack = groupStack.tail
     head
   }
+
+  // add a name binding for a group
+  def bind(name: String, group: Int): Unit = {
+    bindings += (name -> group)
+  }
+
+  def getBindings: Map[String, Int] = bindings.toMap
 }
 
 object REParser extends Parsers {
   override type Elem = RegexToken
 
-  def apply(tokens: Seq[RegexToken]): Either[RegexParserError, RegexAST] = {
+  def apply(tokens: Seq[RegexToken]): Either[RegexParserError, (RegexAST, ParseContext)] = {
     val reader = new RegexTokenReader(tokens)
-    program(new ParseContext())(reader) match {
+    val ctx = new ParseContext()
+    program(ctx)(reader) match {
       case NoSuccess(msg, next) => Left(RegexParserError(msg))
-      case Success(result, next) => Right(result)
+      case Success(result, next) => Right((result, ctx))
       case Error(msg, next) => Left(RegexParserError(msg))
     }
   }
@@ -67,13 +77,19 @@ object REParser extends Parsers {
       case r ~ None => r
   }
 
+  def identifier(implicit ctx: ParseContext): Parser[String] = literal ~ rep(singleChar) ^^ { case c ~ cs => (c :: cs).map(_.c).mkString("") }
+
   def base(implicit ctx: ParseContext): Parser[RegexAST] =
     singleChar |
     (BACKSLASH ~> literal flatMap doEscape) |
     DOT ^^ { _ => CharClassAST.sigma } |
     charClass |
-    LPAREN ~> regex(ctx.pushGroup()) <~ RPAREN ^^ { case r => GroupAST(r,ctx.popGroup()) } |
-    TILDE ~> regex ^^ { case r => ComplementAST(r) }
+    LPAREN ~> opt( HOOK ~> LANGLE ~> identifier <~ RANGLE) ~ regex(ctx.pushGroup()) <~ RPAREN ^^ { case name ~ r =>
+      val groupNum = ctx.popGroup()
+      name.foreach(n => ctx.bind(n, groupNum))
+      GroupAST(r, groupNum)
+    } |
+    TILDE ~> regex ^^ { r => ComplementAST(r) }
 
   private def doEscape(c: CharAST)(implicit ctx: ParseContext): Parser[RegexAST] = c.c match {
     case 't' => success(CharAST('\t'))
@@ -107,7 +123,7 @@ object REParser extends Parsers {
     digitLiteral
 
   def meta(implicit ctx: ParseContext): Parser[RegexToken] =
-    LPAREN | RPAREN | LBRACKET | RBRACKET | PLUS | STAR | HOOK | BACKSLASH | DOT | CARET | DASH | LBRACE | RBRACE | COMMA
+    LPAREN | RPAREN | LBRACKET | RBRACKET | LANGLE | RANGLE | PLUS | STAR | HOOK | BACKSLASH | DOT | CARET | DASH | LBRACE | RBRACE | COMMA
 
   def literal(implicit ctx: ParseContext): Parser[CharAST] = accept("character literal", { case _ @ CHARLIT(c) => CharAST(c) })
 

@@ -120,7 +120,7 @@ final class GroupAST(val re: RegexAST, val group: Int) extends RegexAST {
     } else if (r.isEmpty) {
       (EmptyAST, ctx.withMatch(group))
     } else if (r.acceptsEmpty) {
-      (GroupAST(r, group), (if (openGroups.contains(group)) ctx.withOpen(group) else ctx).withMatch(group))
+      (GroupAST(r, group), (if (openGroups.contains(group)) ctx.withOpen(group) else ctx.withNew(group)).withMatch(group))
     } else {
       (GroupAST(r, group), if (openGroups.contains(group)) ctx.withOpen(group) else ctx.withNew(group))
     }

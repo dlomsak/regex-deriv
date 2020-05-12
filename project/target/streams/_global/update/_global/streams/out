@@ -10,6 +10,7 @@
 [error]   Not found
 [error]   not found: https://repo1.maven.org/maven2/org/scoverage/sbt-scoverage_2.12_1.0/1.5.0/sbt-scoverage-1.5.0.pom
 [error]   not found: C:\Users\enki\.ivy2\local\org.scoverage\sbt-scoverage\scala_2.12\sbt_1.0\1.5.0\ivys\ivy.xml
+[error]   not found: C:\Users\enki\.IdeaIC2019.3\config\plugins\Scala\repo\org.scoverage\sbt-scoverage\scala_2.12\sbt_1.0\1.5.0\ivys\ivy.xml
 [error]   not found: https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/org.scoverage/sbt-scoverage/scala_2.12/sbt_1.0/1.5.0/ivys/ivy.xml
 [error]   not found: https://repo.typesafe.com/typesafe/ivy-releases/org.scoverage/sbt-scoverage/scala_2.12/sbt_1.0/1.5.0/ivys/ivy.xml
 [error] 	at lmcoursier.CoursierDependencyResolution.unresolvedWarningOrThrow(CoursierDependencyResolution.scala:245)
@@ -47,5 +48,6 @@
 [error]   Not found
 [error]   not found: https://repo1.maven.org/maven2/org/scoverage/sbt-scoverage_2.12_1.0/1.5.0/sbt-scoverage-1.5.0.pom
 [error]   not found: C:\Users\enki\.ivy2\local\org.scoverage\sbt-scoverage\scala_2.12\sbt_1.0\1.5.0\ivys\ivy.xml
+[error]   not found: C:\Users\enki\.IdeaIC2019.3\config\plugins\Scala\repo\org.scoverage\sbt-scoverage\scala_2.12\sbt_1.0\1.5.0\ivys\ivy.xml
 [error]   not found: https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/org.scoverage/sbt-scoverage/scala_2.12/sbt_1.0/1.5.0/ivys/ivy.xml
 [error]   not found: https://repo.typesafe.com/typesafe/ivy-releases/org.scoverage/sbt-scoverage/scala_2.12/sbt_1.0/1.5.0/ivys/ivy.xml

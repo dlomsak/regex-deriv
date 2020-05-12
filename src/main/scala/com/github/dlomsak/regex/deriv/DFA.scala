@@ -1,44 +1,47 @@
 package com.github.dlomsak.regex.deriv
 
+final case class MatchEnv[A](dfa: DFA[A], partialMatches: Map[Int, (Int, Int)] = Map.empty, matches: List[(Int, Int, Int)] = List.empty, pos: Int = 0) {
+  def consumeAll(s: String): MatchEnv[A] = s.foldLeft(this)((env, c) => env.consume(c))
+
+  // Useful for stepping through character consumption
+  def consume(c: Char): MatchEnv[A] = {
+    val (outDFA, ctx) = dfa.consume(c)
+    val ctxGroups = ctx.newGroups ++ ctx.openGroups ++ ctx.matchedGroups
+    // discard failed matches from env: env members that are not in any context on current match
+    val pmNonFail = partialMatches -- partialMatches.keySet.diff(ctxGroups)
+    // add on match spans for matched groups; account for "sudden matches" on current character
+    val addedMatches = ctx.matchedGroups.foldLeft(matches)((ms, g) => (g, pmNonFail.get(g).map(_._1).getOrElse(pos), pmNonFail.get(g).map(_._2).getOrElse(1)) :: ms)
+    // advance all ending positions of open groups
+    val openGroups = ctx.openGroups ++ ctx.newGroups.intersect(partialMatches.keySet)
+    val pmUpdatedOpen = openGroups.foldLeft(pmNonFail)((pm, g) => pm + (g -> (pm(g)._1, pm(g)._2 + 1)))
+    // initialize new groups; treat 'new' when present in env as 'open'.
+    val newGroups = ctx.newGroups.diff(partialMatches.keySet)
+    val pmAddedNew = newGroups.foldLeft(pmUpdatedOpen)((pm, g) => pm + (g -> (pos, if (ctx.matchedGroups.contains(g)) 2 else 1)))
+    // remove matched, non-open groups from environment
+    val pmNonMatched = pmAddedNew -- ctx.matchedGroups.diff(openGroups).diff(newGroups)
+    MatchEnv(outDFA, pmNonMatched, addedMatches, pos + 1)
+  }
+
+  def getMatches(groupId: Int): List[(Int, Int)] = if (dfa.isAccepting) matches.filter(_._1 == groupId).map(x => (x._2, x._3)) else List.empty
+
+  def getMatches(groupName: String): List[(Int, Int)] = dfa.getGroup(groupName).map(getMatches).getOrElse(List.empty)
+}
+
 /**
   * A deterministic finite automaton with abstract labeling. Initially, DFA states are labeled with regexes, but we
   * later resolve them to integers for efficiency.
   */
-class DFA[A] private (states: Set[A], init: A, accepting: Set[A], slowDelta: Map[A, List[(CharClassAST, A, MatchContext)]], delta: Map[A, Map[Char, (A, MatchContext)]], env: Map[Int, (Int, Int)] = Map.empty, matches: List[(Int, Int, Int)] = List.empty, pos: Int = 0) {
+class DFA[A] private (val states: Set[A], val init: A, accepting: Set[A], slowDelta: Map[A, List[(CharClassAST, A, MatchContext)]], delta: Map[A, Map[Char, (A, MatchContext)]], bindings: Map[String, Int]) {
   final def accepts(s: String):Boolean = {
     val finalState = s.foldLeft(init)(delta(_)(_)._1)
     accepting.contains(finalState)
   }
 
-  final def getEnv = env
-
-  final def getMatches = if (accepting.contains(init)) matches else List.empty
-
-  final def consumeAll(s: String): DFA[A] = s.foldLeft(this)((tdfa, c) => tdfa.consume(c))
-
-  // Useful for stepping through character consumption
-  final def consume(c: Char): DFA[A] = {
-    val (nState, ctx) = delta(init)(c)
-    val ctxGroups = ctx.newGroups ++ ctx.openGroups ++ ctx.matchedGroups
-    // discard failed matches from env: env members that are not in any context on current match
-    val env2f = env -- env.keySet.diff(ctxGroups)
-    // add on match spans for matched groups
-    val matches2 = ctx.matchedGroups.foldLeft(matches)((ms, g) => (g, env2f(g)._1, env2f(g)._2) :: ms)
-    // advance all ending positions of open groups
-    val openGroups = ctx.openGroups ++ ctx.newGroups.intersect(env.keySet)
-    val env2o = openGroups.foldLeft(env2f)((env, g) => env + (g -> (env(g)._1, env(g)._2 + 1)))
-    // initialize new groups; treat 'new' when present in env as 'open'.
-    val newGroups = ctx.newGroups.diff(env.keySet)
-    val env2n = newGroups.foldLeft(env2o)((env, g) => env + (g -> (pos, 1)))
-    // remove matched, non-open groups from environment
-    val env2m = env2n -- ctx.matchedGroups.diff(openGroups)
-    new DFA(states, nState, accepting, slowDelta, delta, env2m, matches2, pos + 1)
-  }
-
+  def isAccepting = accepting.contains(init)
 
   // Generates a visualizable description of the DFA; to be fed in to GraphViz/Dot
   final def toDot: String = {
-    val body = slowDelta.map { case (state,transitions) =>
+    val body = slowDelta.map { case (state, transitions) =>
       transitions.map { case (charCls, toState, ctx) =>
         val prefix = if (charCls.inverted) "~" else ""
         val transChars = charCls.chars.mkString(",")
@@ -61,11 +64,21 @@ class DFA[A] private (states: Set[A], init: A, accepting: Set[A], slowDelta: Map
         |}
      """.stripMargin
   }
+
+  // emit a new DFA supposing character c was consumed (only init may differ)
+  def consume(c: Char): (DFA[A], MatchContext) = {
+    val (toState, ctx) = delta(init)(c)
+    (new DFA(states, toState, accepting, slowDelta, delta, bindings), ctx)
+  }
+
+  def apply(s: String): MatchEnv[A] = MatchEnv(this).consumeAll(s)
+
+  def getGroup(name: String): Option[Int] = bindings.get(name)
 }
 
 // TODO: recognize that this has turned into a TDFA
 object DFA {
-  def apply[A](states: Set[A], init: A, accepting: Set[A], delta: Map[A, List[(CharClassAST, A, MatchContext)]]): DFA[A] = {
+  def apply[A](states: Set[A], init: A, accepting: Set[A], delta: Map[A, List[(CharClassAST, A, MatchContext)]], bindings: Map[String, Int]): DFA[A] = {
     /* transform {state -> [(charClass, nextState)]} into {state -> {char -> nextState}} for efficient transitioning
        * We know that for any given state, the character classes for transitions are disjoint or else we'd not have a DFA.
        * This means we can combine the character classes into a Map so that we can find the transition-to state in O(1) for
@@ -83,6 +96,6 @@ object DFA {
       }
       inState -> flatTrans.toMap.withDefaultValue(defaultState)
     }
-    new DFA(states, init, accepting, delta, quickDelta)
+    new DFA(states, init, accepting, delta, quickDelta, bindings)
   }
 }
