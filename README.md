@@ -14,8 +14,8 @@ The main goal is to provide a regex library that avoids backtracking and extra-r
 
 Roadmap
 -------
-* ~~Lexer and parser for basic regex operators~~
-* ~~Implement regex derivatives for all AST structures and method for performing string matching~~
+* ~~lexer and parser for basic regex operators~~
+* ~~implement regex derivatives for all AST structures and method for performing string matching~~
 * ~~add tests and use property-based testing~~
 * ~~CI with code coverage~~
 * ~~support character classes~~
@@ -23,11 +23,15 @@ Roadmap
 * ~~support common character class escape sequences such as \d for digits~~
 * ~~support quantification (e.g., "r{n, m}" matches n to m occurrences of r)~~
 * reimplement parser to remove backtracking
-* support group extraction
-* support named groups
+* ~~support group extraction~~
+* ~~support named groups~~
+* more comprehensive group match testing
+* add getAllMatches method for a regex against a string
+* resolve ambiguous group matches POSIX style
+* support non-greedy repetition
 * support directives such as ?i for case insensitivity
 * performance testing against scala.util.matching.regex
-* Generate accepted strings from DFA
+* generate accepted strings from DFA
 
 Contributors
 ------------
