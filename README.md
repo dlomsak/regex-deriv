@@ -27,3 +27,7 @@ Roadmap
 * support named groups
 * support directives such as ?i for case insensitivity
 * performance testing against scala.util.matching.regex
+
+Contributors
+------------
+[Daniel Porter](https://github.com/DanielPorter)
