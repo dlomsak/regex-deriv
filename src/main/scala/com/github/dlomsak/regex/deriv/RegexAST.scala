@@ -2,23 +2,6 @@ package com.github.dlomsak.regex.deriv
 
 import com.github.dlomsak.regex.deriv
 
-final case class MatchContext (
-                              newGroups: Set[Int] = Set.empty,
-                              openGroups: Set[Int] = Set.empty,
-                              matchedGroups: Set[Int] = Set.empty
-                              ) {
-  def withNew(group: Int) = copy(newGroups = newGroups + group)
-  def withOpen(group: Int) = copy(openGroups = openGroups + group)
-  def withMatch(group: Int) = copy(matchedGroups = matchedGroups + group)
-
-  def union(other: MatchContext) = MatchContext(newGroups ++ other.newGroups, openGroups ++ other.openGroups, matchedGroups ++ other.matchedGroups)
-  def intersect(other:MatchContext) = union(other) // TODO: define
-}
-
-object MatchContext {
-  val empty = MatchContext()
-}
-
 sealed trait RegexAST {
     /**
     * denotes whether the regex matches the empty string (helper function for eval and derive)
@@ -45,12 +28,12 @@ sealed trait RegexAST {
     * remainder of the input given c is consumed. The expression is also simplified along the way.
    * Sub-group matching directions are collected along the way to inform the transducer
     */
-  def derive(c: Char, openGroups: Set[Int]): (RegexAST, MatchContext)
+  def derive(c: Char): RegexAST
 
   /**
     * perform derivation on the expression for a string of characters
     */
-  def apply(input: String) = input.foldLeft(this)((r, c) => r.derive(c, Set.empty)._1)
+  def apply(input: String) = input.foldLeft(this)((r, c) => r.derive(c))
 
   /*
    * returns the character equivalnce classes per section 4.2
@@ -64,7 +47,7 @@ case object NullAST extends RegexAST {
 
   override def isNull: Boolean = true
 
-  def derive(c: Char, openGroups: Set[Int]) = (this, MatchContext.empty)
+  def derive(c: Char) = this
 
   val getCharClasses: Set[CharClassAST] = Set(CharClassAST.sigma)
 }
@@ -75,7 +58,7 @@ case object EmptyAST extends RegexAST {
 
   override def isEmpty: Boolean = true
 
-  def derive(c: Char, openGroups: Set[Int]) = (NullAST, MatchContext.empty)
+  def derive(c: Char) = NullAST
 
   val getCharClasses: Set[CharClassAST] = Set(CharClassAST.sigma)
 }
@@ -84,9 +67,9 @@ case object EmptyAST extends RegexAST {
 final class ComplementAST(val re: RegexAST) extends RegexAST {
   def acceptsEmpty = !re.acceptsEmpty
 
-  def derive(c: Char, openGroups: Set[Int]) = {
-    val (r, ctx) = re.derive(c, openGroups)
-    (ComplementAST(r), ctx)
+  def derive(c: Char) = {
+    val r = re.derive(c)
+    ComplementAST(r)
   }
 
   val getCharClasses: Set[CharClassAST] = re.getCharClasses
@@ -102,58 +85,19 @@ final class ComplementAST(val re: RegexAST) extends RegexAST {
 object ComplementAST {
   def apply(re: RegexAST): RegexAST = re match {
     case ComplementAST(r) => r
-    case GroupAST(r, g) => GroupAST(ComplementAST(r), g)
     case _ => new ComplementAST(re)
   }
 
   def unapply(arg: ComplementAST): Option[RegexAST] = Some(arg.re)
 }
 
-// a grouping
-final class GroupAST(val re: RegexAST, val group: Int) extends RegexAST {
-  def acceptsEmpty: Boolean = re.acceptsEmpty
-
-  def derive(c: Char, openGroups: Set[Int]) = {
-    val (r, ctx) = re.derive(c, openGroups)
-    if (r.isNull) {
-      (NullAST, ctx)
-    } else if (r.isEmpty) {
-      (EmptyAST, ctx.withMatch(group))
-    } else if (r.acceptsEmpty) {
-      (GroupAST(r, group), (if (openGroups.contains(group)) ctx.withOpen(group) else ctx.withNew(group)).withMatch(group))
-    } else {
-      (GroupAST(r, group), if (openGroups.contains(group)) ctx.withOpen(group) else ctx.withNew(group))
-    }
-  }
-
-  val getCharClasses: Set[CharClassAST] = re.getCharClasses
-
-  override def equals(o: scala.Any): Boolean = o match {
-    case GroupAST(r2, group2) if re == r2 && group == group2 => true
-    case _ => false
-  }
-
-  override def toString: String = s"GroupAST($re, $group)"
-}
-
-object GroupAST {
-  def apply(re: RegexAST, group: Int): RegexAST = re match {
-    case NullAST => NullAST
-    case GroupAST(_, g) if g == group => re
-    case _ => new GroupAST(re, group)
-  }
-
-  def unapply(arg: GroupAST): Option[(RegexAST, Int)] = Some(arg.re, arg.group)
-}
-
-
 final class OrAST(val left: RegexAST, val right: RegexAST) extends RegexAST {
   def acceptsEmpty = left.acceptsEmpty || right.acceptsEmpty
 
-  def derive(c: Char, openGroups: Set[Int]) = {
-    val (lr, lctx) = left.derive(c, openGroups)
-    val (rr, rctx) = right.derive(c, openGroups)
-    (OrAST(lr, rr), lctx.union(rctx))
+  def derive(c: Char) = {
+    val lr = left.derive(c)
+    val rr = right.derive(c)
+    OrAST(lr, rr)
   }
 
   val getCharClasses: Set[CharClassAST] = CharClassAST.conjunction(left.getCharClasses, right.getCharClasses)
@@ -186,11 +130,11 @@ object OrAST {
 final class AndAST(val left: RegexAST, val right: RegexAST) extends RegexAST {
   def acceptsEmpty = left.acceptsEmpty && right.acceptsEmpty
 
-  def derive(c: Char, openGroups: Set[Int]) = {
+  def derive(c: Char) = {
     // TODO: revisit correctness of intersecting actions
-    val (lr, lctx) = left.derive(c, openGroups)
-    val (rr, rctx) = right.derive(c, openGroups)
-    (AndAST(lr, rr), lctx.intersect(rctx))
+    val lr = left.derive(c)
+    val rr = right.derive(c)
+    AndAST(lr, rr)
   }
 
   val getCharClasses: Set[CharClassAST] = CharClassAST.conjunction(left.getCharClasses, right.getCharClasses)
@@ -220,14 +164,14 @@ object AndAST {
 final class CatAST(val left: RegexAST, val right: RegexAST) extends RegexAST {
   def acceptsEmpty = left.acceptsEmpty && right.acceptsEmpty
 
-  def derive(c: Char, openGroups: Set[Int]) = {
-    val (lr, lctx) = left.derive(c, openGroups)
+  def derive(c: Char) = {
+    val lr = left.derive(c)
     val dLeft = CatAST(lr, right)
     if (left.acceptsEmpty) {
-      val (rr, rctx) = right.derive(c, openGroups)
-      (OrAST(dLeft, rr), lctx.union(rctx))
+      val rr = right.derive(c)
+      OrAST(dLeft, rr)
     } else {
-      (dLeft, lctx)
+      dLeft
     }
   }
 
@@ -262,9 +206,9 @@ object CatAST {
 final class StarAST(val re: RegexAST) extends RegexAST {
   def acceptsEmpty = true
 
-  def derive(c: Char, openGroups: Set[Int]) = {
-    val (r, ctx) = re.derive(c, openGroups)
-    (CatAST(r, this), ctx)
+  def derive(c: Char) = {
+    val r = re.derive(c)
+    CatAST(r, this)
   }
 
   val getCharClasses: Set[CharClassAST] = re.getCharClasses
@@ -292,7 +236,7 @@ object StarAST {
 final case class CharAST(c: Char) extends RegexAST {
   def acceptsEmpty = false
 
-  def derive(cin: Char, openGroups: Set[Int]) = (if (c == cin) EmptyAST else NullAST, MatchContext.empty)
+  def derive(cin: Char) = (if (c == cin) EmptyAST else NullAST)
 
   val getCharClasses: Set[CharClassAST] = Set(CharClassAST(Set(c), inverted = false), CharClassAST(Set(c), inverted = true))
 }
@@ -300,10 +244,10 @@ final case class CharAST(c: Char) extends RegexAST {
 final case class CharClassAST(chars: Set[Char], inverted: Boolean) extends RegexAST {
   def acceptsEmpty = false
 
-  def derive(c: Char, openGroups: Set[Int]) = {
+  def derive(c: Char) = {
     val isMember = chars.contains(c)
     val isMatch = if (inverted) !isMember else isMember
-    (if (isMatch) EmptyAST else NullAST, MatchContext.empty)
+    if (isMatch) EmptyAST else NullAST
   }
 
   def getCharClasses: Set[CharClassAST] = {

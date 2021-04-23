@@ -23,15 +23,16 @@ Roadmap
 * ~~support common character class escape sequences such as \d for digits~~
 * ~~support quantification (e.g., "r{n, m}" matches n to m occurrences of r)~~
 * reimplement parser to remove backtracking
-* ~~support group extraction~~
-* ~~support named groups~~
-* more comprehensive group match testing
-* add getAllMatches method for a regex against a string
-* resolve ambiguous group matches POSIX style
 * support non-greedy repetition
 * support directives such as ?i for case insensitivity
 * performance testing against scala.util.matching.regex
 * generate accepted strings from DFA
+
+On hold
+-------------
+* more comprehensive group match testing
+* add getAllMatches method for a regex against a string
+* resolve ambiguous group matches POSIX style
 
 Contributors
 ------------

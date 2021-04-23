@@ -12,6 +12,8 @@ class DFASpec extends BaseSpec {
     }
   }
 
+  // removed group matching, retain tests for now
+/*
   it should "group properly with *" in {
     RegExpr("((abc)*)").right.get("abcabcabc").matches shouldBe List((0,0,8), (1,6,2), (0,0,5), (1,3,2), (0,0,2), (1,0,2))
   }
@@ -25,4 +27,5 @@ class DFASpec extends BaseSpec {
     result.getMatches("start") shouldBe List((0,3), (0,2), (0,1))
     result.getMatches("end") shouldBe List((7, 1))
   }
+  */
 }

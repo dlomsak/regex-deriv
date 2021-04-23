@@ -8,10 +8,10 @@ import com.github.dlomsak.regex.deriv.{CharClassAST, DFA, GroupAST, MatchContext
 
 object RE2DFA {
   type State = RegexAST
-  type Delta = Map[(State, CharClassAST), (State, MatchContext)]
+  type Delta = Map[(State, CharClassAST), State]
   type States = Set[State]
 
-  private def goto(state: State, openGroups: Set[Int])(st: (States, Delta), s: CharClassAST): (States, Delta) = {
+  private def goto(state: State)(st: (States, Delta), s: CharClassAST): (States, Delta) = {
     val (states, delta) = st
 
     // if the character class is empty, no transitions to make
@@ -28,27 +28,27 @@ object RE2DFA {
       // nonempty, inverted. Find a character in the class whose successor is not in it
       s.chars.map(_.toInt + 1).map(_.toChar).find(!s.chars.contains(_)).get
     }
-    val (qc, qctx) = state.derive(c, openGroups)
+    val qc = state.derive(c)
     states.find(_.equals(qc)).map { qPrime =>
-      (states, delta + ((state, s) -> (qPrime, qctx)))
+      (states, delta + ((state, s) -> qPrime))
     } getOrElse {
-      explore(states + qc, delta + ((state, s) -> (qc, qctx)), qc, qctx.openGroups ++ qctx.newGroups)
+      explore(states + qc, delta + ((state, s) -> qc), qc)
     }
   }
 
-  private def explore(states: States, delta: Delta, state: State, openGroups: Set[Int]): (States, Delta) =
-    state.getCharClasses.foldLeft((states, delta))(goto(state, openGroups))
+  private def explore(states: States, delta: Delta, state: State): (States, Delta) =
+    state.getCharClasses.foldLeft((states, delta))(goto(state))
 
   private def mkDFA(r: RegexAST, ctx: ParseContext): DFA[Int] = {
-    val (states, delta) = explore(Set(r), Map.empty, r, Set.empty)
+    val (states, delta) = explore(Set(r), Map.empty, r)
     val accepting = states.filter(_.acceptsEmpty)
     // label states numerically rather than by regex
     val nStates = states.zipWithIndex.toMap
     val nStatesS = nStates.map { case (k, v) => (k.toString, v) }
-    val nDelta = delta.map { case ((s1, cc), (s2, t2)) => ((nStatesS(s1.toString), cc), (nStatesS(s2.toString), t2)) }
+    val nDelta = delta.map { case ((s1, cc), s2) => ((nStatesS(s1.toString), cc), nStatesS(s2.toString)) }
     // compute state -> (charClass, nextState) structure for DFA because we can't directly do Map lookups on char classes
-    val nDeltaSt = nDelta.toList.map{case ((s1, cc), (s2, t2)) => (s1, (cc, s2, t2))}.groupBy(_._1).mapValues(_.map(_._2))
-    DFA(nStates.values.toSet, nStates(r), accepting.map(nStates), nDeltaSt, ctx.getBindings)
+    val nDeltaSt = nDelta.toList.map{case ((s1, cc), s2) => (s1, (cc, s2))}.groupBy(_._1).mapValues(_.map(_._2))
+    DFA(nStates.values.toSet, nStates(r), accepting.map(nStates), nDeltaSt)
   }
 
   def apply(r: RegexAST, ctx: ParseContext): DFA[Int] = mkDFA(r, ctx)

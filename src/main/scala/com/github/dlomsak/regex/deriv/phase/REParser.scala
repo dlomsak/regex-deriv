@@ -87,7 +87,8 @@ object REParser extends Parsers {
     LPAREN ~> opt( HOOK ~> LANGLE ~> identifier <~ RANGLE) ~ regex(ctx.pushGroup()) <~ RPAREN ^^ { case name ~ r =>
       val groupNum = ctx.popGroup()
       name.foreach(n => ctx.bind(n, groupNum))
-      GroupAST(r, groupNum)
+      //GroupAST(r, groupNum)
+      r
     } |
     TILDE ~> regex ^^ { r => ComplementAST(r) }
 
