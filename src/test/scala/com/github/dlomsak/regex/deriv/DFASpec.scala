@@ -12,6 +12,10 @@ class DFASpec extends BaseSpec {
     }
   }
 
+  it should "not crash with long expressions" in {
+    RegExpr("a"*10000).right.get.states shouldBe 10000
+  }
+
   // removed group matching, retain tests for now
 /*
   it should "group properly with *" in {
