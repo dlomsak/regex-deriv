@@ -1,6 +1,6 @@
 package com.github.dlomsak.regex.deriv.phase
 
-import com.github.dlomsak.regex.deriv.{CharClassAST, DFA, GroupAST, MatchContext, RegexAST}
+import com.github.dlomsak.regex.deriv.{CharClassAST, DFA, RegexAST}
 
 /**
   * Creates a DFA from a regular expression AST
