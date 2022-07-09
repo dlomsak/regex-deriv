@@ -13,7 +13,7 @@ class DFASpec extends BaseSpec {
   }
 
   it should "not crash with long expressions" in {
-    RegExpr("a"*10000).right.get.states shouldBe 10000
+    RegExpr("a"*5000).right.get.states.size shouldBe 5002
   }
 
   // removed group matching, retain tests for now

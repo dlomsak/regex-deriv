@@ -29,5 +29,4 @@ trait BaseSpec extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks
     else { Gen.oneOf(genLeaf, genRegex(depth + 1)) }
 
   implicit val arbRegex: Arbitrary[RegexAST] = Arbitrary(genRegex(0))
-
 }

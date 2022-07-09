@@ -27,7 +27,7 @@ class RegexASTSpec extends BaseSpec {
 
   it should "commute over equality" in {
     forAll { (r1: RegexAST, r2: RegexAST) =>
-      OrAST(r1, r2) should equal (OrAST(r2, r1))
+      OrAST(r1, r2) shouldEqual OrAST(r2, r1)
     }
   }
 
