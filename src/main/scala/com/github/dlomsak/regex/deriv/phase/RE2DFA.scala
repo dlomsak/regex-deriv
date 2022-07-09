@@ -2,6 +2,8 @@ package com.github.dlomsak.regex.deriv.phase
 
 import com.github.dlomsak.regex.deriv.{CharClassAST, DFA, RegexAST}
 
+import scala.annotation.tailrec
+
 /**
   * Creates a DFA from a regular expression AST
   */
@@ -11,36 +13,56 @@ object RE2DFA {
   type Delta = Map[(State, CharClassAST), State]
   type States = Set[State]
 
-  private def goto(state: State)(st: (States, Delta), s: CharClassAST): (States, Delta) = {
-    val (states, delta) = st
+  // used in explore to represent suspended work as values in place of recursive calls
+  sealed trait ExploreStep
+  final case class ExploreState(state: State) extends ExploreStep
+  final case class ExploreTransitions(state: State, ccls: CharClassAST) extends ExploreStep
 
-    // if the character class is empty, no transitions to make
-    if (s.chars.isEmpty && !s.inverted) return st
-
-    // Find a character for derivation. All chars in the class will be treated the same so which one we take doesn't
-    // matter. In the case of Sigma, just use 'a' as an arbitrary symbol as there is no point in bringing randomness
-    // into the computation
-    val c = if (s.chars.isEmpty && s.inverted) {
-      'a'
-    } else if (s.chars.nonEmpty && !s.inverted) {
-      s.chars.head
-    } else {
-      // nonempty, inverted. Find a character in the class whose successor is not in it
-      s.chars.map(_.toInt + 1).map(_.toChar).find(!s.chars.contains(_)).get
-    }
-    val qc = state.derive(c)
-    states.find(_.equals(qc)).map { qPrime =>
-      (states, delta + ((state, s) -> qPrime))
-    } getOrElse {
-      explore(states + qc, delta + ((state, s) -> qc), qc)
+  /**
+   * Find the set of states and delta function from an initial state via repeated derivation
+   * This method is based on the goto/explore functions which are mutually recursive in the original paper, but
+   * this implementation is tail recursive for the sake of the call stack.
+   *
+   * @param states the set of states created so far
+   * @param delta the transitions between known states
+   * @param work the list of pending states/transitions to search
+   * @return all generated states and their transitions
+   */
+  @tailrec
+  private def explore(states: States, delta: Delta, work: List[ExploreStep]): (States, Delta) = {
+    work match {
+      case Nil => (states, delta)
+      case ExploreState(state) :: ws => explore(states, delta, state.getCharClasses.toList.foldLeft(ws)((wsAccum, ccls) => ExploreTransitions(state, ccls) :: wsAccum))
+      case ExploreTransitions(state, ccls) :: ws =>
+        // if the character class is empty, no transitions to make
+        if (ccls.chars.isEmpty && !ccls.inverted) {
+          explore(states, delta, ws)
+        } else {
+          // Find a character for derivation. All chars in the class will be treated the same so which one we take doesn't
+          // matter. In the case of Sigma, just use 'a' as an arbitrary symbol as there is no point in bringing randomness
+          // into the computation
+          val c = if (ccls.chars.isEmpty && ccls.inverted) {
+            'a'
+          } else if (ccls.chars.nonEmpty && !ccls.inverted) {
+            ccls.chars.head
+          } else {
+            // nonempty, inverted. Find a character in the class whose successor is not in it
+            ccls.chars.map(_.toInt + 1).map(_.toChar).find(!ccls.chars.contains(_)).get
+          }
+          val qc = state.derive(c)
+          val qcExist = states.find(_.equals(qc))
+          // if derived state exists, add transition and move on with remaining work, otherwise explore derived state
+          if (qcExist.nonEmpty) {
+            explore(states, delta + ((state, ccls) -> qcExist.get), ws)
+          } else {
+            explore(states + qc, delta + ((state, ccls) -> qc), ExploreState(qc) :: ws)
+          }
+        }
     }
   }
 
-  private def explore(states: States, delta: Delta, state: State): (States, Delta) =
-    state.getCharClasses.foldLeft((states, delta))(goto(state))
-
   private def mkDFA(r: RegexAST, ctx: ParseContext): DFA[Int] = {
-    val (states, delta) = explore(Set(r), Map.empty, r)
+    val (states, delta) = explore(Set(r), Map.empty, List(ExploreState(r)))
     val accepting = states.filter(_.acceptsEmpty)
     // label states numerically rather than by regex
     val nStates = states.zipWithIndex.toMap
