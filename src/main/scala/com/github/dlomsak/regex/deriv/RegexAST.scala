@@ -176,13 +176,19 @@ object AndAST {
   def unapply(arg: AndAST): Option[(RegexAST, RegexAST)] = Some(arg.left, arg.right)
 }
 
-final class CatAST(val left: RegexAST, val right: RegexAST) extends RegexAST {
-  override val acceptsEmpty: Boolean = left.acceptsEmpty && right.acceptsEmpty
+final class CatAST(val children: List[RegexAST]) extends RegexAST {
+  override val acceptsEmpty: Boolean = children.forall(_.acceptsEmpty)
 
-  val getCharClasses: Set[CharClassAST] = if (!left.acceptsEmpty) {
-    left.getCharClasses
-  } else {
-    CharClassAST.conjunction(left.getCharClasses, right.getCharClasses)
+  val getCharClasses: Set[CharClassAST] = {
+    var curr = children.head
+    var rest = children.tail
+    var ccls = curr.getCharClasses
+    while (curr.acceptsEmpty && rest.nonEmpty) {
+      curr = rest.head
+      rest = rest.tail
+      ccls = CharClassAST.conjunction(ccls, curr.getCharClasses)
+    }
+    ccls
   }
 
   override def equals(o: Any): Boolean = o match {
@@ -190,34 +196,54 @@ final class CatAST(val left: RegexAST, val right: RegexAST) extends RegexAST {
     case _ => false
   }
 
-  override def toString: String = s"CatAST($left, $right)"
+  override def toString: String = s"CatAST(${children.mkString("")})"
 
   override def derive(c: Char): RegexAST = {
-    val dLeft = left.derive(c)
-    if (left.acceptsEmpty) {
-      OrAST(CatAST(dLeft, right), right.derive(c))
-    } else {
-      CatAST(dLeft, right)
+    var curr = children.head
+    var rest = children.tail
+    var drvs = List(CatAST(curr.derive(c) :: rest))
+    while (curr.acceptsEmpty && rest.nonEmpty) {
+      curr = rest.head
+      rest = rest.tail
+      drvs = CatAST(curr.derive(c) :: rest) :: drvs
     }
+    drvs.foldLeft(EmptyAST: RegexAST)((acc, r) => OrAST(r, acc))
   }
 
+
   override def equivalent(other: RegexAST): Boolean = other match {
-    case CatAST(l, r) => left.equivalent(l) && right.equivalent(r)
+    case CatAST(otherChildren) if children.size == otherChildren.size =>
+      children.zip(otherChildren).forall { case (l, r) => l.equivalent(r) }
     case _ => false
   }
 }
 
 object CatAST {
-  def apply(left: RegexAST, right: RegexAST): RegexAST = (left, right) match {
-    case (NullAST, _) => NullAST
-    case (_, NullAST) => NullAST
-    case (EmptyAST, _) => right
-    case (_, EmptyAST) => left
-    case (CatAST(r, s), t) => new CatAST(r, CatAST(s, t))
-    case _ => new CatAST(left, right)
-  }
+  def unapply(arg: CatAST): Option[List[RegexAST]] = Some(arg.children)
 
-  def unapply(arg: CatAST): Option[(RegexAST, RegexAST)] = Some(arg.left, arg.right)
+  def apply(child: RegexAST*): RegexAST = apply(child.toList)
+
+  def apply(children: List[RegexAST]): RegexAST = {
+    // if any child is null, the whole catenation is null
+    if (children.exists(_.isNull)) {
+      NullAST
+    } else {
+      // EmptyAST children have no effect in a catenation
+      val neChildren = children.filterNot(_.isEmpty)
+      if (neChildren.isEmpty) {
+        EmptyAST
+      } else if (neChildren.size == 1) {
+        // unwrap catenation when single child
+        neChildren.head
+      } else {
+        // flatten any child CatASTs
+        new CatAST(neChildren.flatMap {
+          case CatAST(otherChildren) => otherChildren
+          case x => List(x)
+        })
+      }
+    }
+  }
 }
 
 
@@ -233,7 +259,7 @@ final class StarAST(val re: RegexAST) extends RegexAST {
 
   override def toString: String = s"StarAST($re)"
 
-  override def derive(c: Char): RegexAST = CatAST(re.derive(c), this)
+  override def derive(c: Char): RegexAST = CatAST(List(re.derive(c), this))
 
   override def equivalent(other: RegexAST): Boolean = other match {
     case StarAST(r) => r.equivalent(re)

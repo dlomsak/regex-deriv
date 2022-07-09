@@ -20,7 +20,7 @@ trait BaseSpec extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks
   def genCat(depth: Int): Gen[RegexAST] = for {
     r1 <- genRegex(depth)
     r2 <- genRegex(depth)
-  } yield CatAST(r1, r2)
+  } yield CatAST(List(r1, r2))
 
   def genStar(depth: Int): Gen[RegexAST] = for (r <- genRegex(depth)) yield StarAST(r)
 

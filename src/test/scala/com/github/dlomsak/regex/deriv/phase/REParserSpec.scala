@@ -40,7 +40,7 @@ class REParserSpec extends BaseSpec {
   }
 
   it should "give higher precedence to + than concatenation" in {
-    REParser(RELexer("ab+").right.get).right.get._1 shouldEqual CatAST(CharAST('a'), CatAST(CharAST('b'), StarAST(CharAST('b'))))
+    REParser(RELexer("ab+").right.get).right.get._1 shouldEqual CatAST(CharAST('a'), CatAST(List(CharAST('b'), StarAST(CharAST('b')))))
   }
 
   it should "give higher precedence to ? than concatenation" in {
@@ -76,12 +76,12 @@ class REParserSpec extends BaseSpec {
 
   it should "parse a quantifier" in {
       REParser(RELexer("a{2}").right.get).right.get._1 shouldEqual CatAST(CharAST('a'), CharAST('a'))
-      REParser(RELexer("a{2,4}").right.get).right.get._1 shouldEqual CatAST(CharAST('a'), CatAST(CharAST('a'), CatAST(OrAST(EmptyAST, CharAST('a')), OrAST(EmptyAST, CharAST('a')))))
-      REParser(RELexer("a{3,}").right.get).right.get._1 shouldEqual CatAST(CharAST('a'), CatAST(CharAST('a'), CatAST(CharAST('a'), StarAST(CharAST('a')))))
+      REParser(RELexer("a{2,4}").right.get).right.get._1 shouldEqual CatAST(CharAST('a'), CharAST('a'), OrAST(EmptyAST, CharAST('a')), OrAST(EmptyAST, CharAST('a')))
+      REParser(RELexer("a{3,}").right.get).right.get._1 shouldEqual CatAST(CharAST('a'), CharAST('a'), CharAST('a'), StarAST(CharAST('a')))
   }
 
   it should "quantify numeric characters" in {
-    REParser(RELexer("2{4}").right.get).right.get._1 shouldEqual CatAST(CharAST('2'), CatAST(CharAST('2'), CatAST(CharAST('2'), CharAST('2'))))
+    REParser(RELexer("2{4}").right.get).right.get._1 shouldEqual CatAST(CharAST('2'), CharAST('2'), CharAST('2'), CharAST('2'))
   }
 
   it should "fail parsing negative quantifiers" in {

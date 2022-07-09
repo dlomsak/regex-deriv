@@ -3,18 +3,22 @@ package com.github.dlomsak.regex.deriv
 
 class RegexASTSpec extends BaseSpec {
 
-  "CatAST" should "associate to the right" in {
+  "CatAST" should "combine when nested" in {
     forAll { (r1: RegexAST, r2: RegexAST, r3: RegexAST) =>
-      CatAST(CatAST(r1, r2), r3) should equal (CatAST(r1, CatAST(r2, r3)))
+      CatAST(List(CatAST(List(r1, r2)), r3)) should equal (CatAST(List(r1, r2, r3)))
     }
   }
 
   it should "not generally commute over equality" in {
     forAll { (r1: RegexAST, r2: RegexAST) =>
       whenever(!r1.acceptsEmpty && !r1.isNull && !r2.acceptsEmpty && !r2.isNull && r1 != r2) {
-        CatAST(r1, r2) should not equal CatAST(r2, r1)
+        CatAST(List(r1, r2)) should not equal CatAST(List(r2, r1))
       }
     }
+  }
+
+  it should "derive successfully over long sequences" in {
+    CatAST(List.fill(10000)(CharAST('a'))).apply("a"*10000).acceptsEmpty should equal (true)
   }
 
   "OrAST" should "associate to the right" in {

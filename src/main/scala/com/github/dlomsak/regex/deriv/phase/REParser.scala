@@ -60,20 +60,20 @@ object REParser extends Parsers {
       case l ~ None => l
     }
 
-  def term(implicit ctx: ParseContext): Parser[RegexAST] = rep1(factor) ^^ { _.reduceLeft(CatAST.apply) }
+  def term(implicit ctx: ParseContext): Parser[RegexAST] = rep1(factor) ^^ { CatAST(_) }
 
   def factor(implicit ctx: ParseContext): Parser[RegexAST] =  base ~ opt(STAR | PLUS | HOOK | quantifier) ^^ {
       case r ~ Some(STAR) => StarAST(r)
-      case r ~ Some(PLUS) => CatAST(r, StarAST(r))
+      case r ~ Some(PLUS) => CatAST(List(r, StarAST(r)))
       case r ~ Some(HOOK) => OrAST(r, EmptyAST)
       case r ~ Some((lower: Int, optUpper: Option[Int])) =>
         val suffix = optUpper map { upper =>
-          (lower until upper).foldLeft(EmptyAST: RegexAST) { case (subtree, _) => CatAST(subtree, OrAST(r, EmptyAST)) }
+          (lower until upper).foldLeft(EmptyAST: RegexAST) { case (subtree, _) => CatAST(List(subtree, OrAST(r, EmptyAST))) }
         } getOrElse {
           StarAST(r)
         }
-        val prefix = (0 until lower).foldLeft(EmptyAST: RegexAST) { case (subtree, _) => CatAST(r, subtree) }
-        CatAST(prefix, suffix)
+        val prefix = (0 until lower).foldLeft(EmptyAST: RegexAST) { case (subtree, _) => CatAST(List(r, subtree)) }
+        CatAST(List(prefix, suffix))
       case r ~ None => r
   }
 
