@@ -60,7 +60,7 @@ case object EmptyAST extends RegexAST {
 
   val getCharClasses: Set[CharClassAST] = Set(CharClassAST.sigma)
 
-  override def derive(c: Char): RegexAST = EmptyAST
+  override def derive(c: Char): RegexAST = NullAST
 }
 
 // Complement of another AST
@@ -82,6 +82,8 @@ final class ComplementAST(val re: RegexAST) extends RegexAST {
 object ComplementAST {
   def apply(re: RegexAST): RegexAST = re match {
     case ComplementAST(r) => r
+    case NullAST => EmptyAST
+    case EmptyAST => NullAST
     case _ => new ComplementAST(re)
   }
 

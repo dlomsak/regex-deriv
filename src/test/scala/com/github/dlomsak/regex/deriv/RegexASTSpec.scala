@@ -47,5 +47,4 @@ class RegexASTSpec extends BaseSpec {
     RegExpr("\\h").right.get.matches("\t") shouldBe true
     RegExpr("\\H").right.get.matches("\t") shouldBe false
   }
-
 }
