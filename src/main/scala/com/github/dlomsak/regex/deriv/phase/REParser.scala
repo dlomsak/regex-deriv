@@ -14,28 +14,7 @@ class RegexTokenReader(tokens: Seq[RegexToken]) extends Reader[RegexToken] {
 }
 
 final class ParseContext {
-  private var count = 0
-  private var groupStack = List.empty[Int]
-  private val bindings = mutable.Map.empty[String, Int]
-
-  def pushGroup(): ParseContext = {
-    groupStack = count :: groupStack
-    count += 1
-    this
-  }
-
-  def popGroup(): Int = {
-    val head = groupStack.head
-    groupStack = groupStack.tail
-    head
-  }
-
-  // add a name binding for a group
-  def bind(name: String, group: Int): Unit = {
-    bindings += (name -> group)
-  }
-
-  def getBindings: Map[String, Int] = bindings.toMap
+  // unused
 }
 
 object REParser extends Parsers {
@@ -84,12 +63,7 @@ object REParser extends Parsers {
     (BACKSLASH ~> literal flatMap doEscape) |
     DOT ^^ { _ => CharClassAST.sigma } |
     charClass |
-    LPAREN ~> opt( HOOK ~> LANGLE ~> identifier <~ RANGLE) ~ regex(ctx.pushGroup()) <~ RPAREN ^^ { case name ~ r =>
-      val groupNum = ctx.popGroup()
-      name.foreach(n => ctx.bind(n, groupNum))
-      //GroupAST(r, groupNum)
-      r
-    } |
+    LPAREN ~> regex <~ RPAREN ^^ { case r => r } |
     TILDE ~> regex ^^ { r => ComplementAST(r) }
 
   private def doEscape(c: CharAST)(implicit ctx: ParseContext): Parser[RegexAST] = c.c match {
