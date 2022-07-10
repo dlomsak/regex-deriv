@@ -2,7 +2,9 @@
 
 Regex-Deriv
 ==============
-A Scala regular expression implementation with derivative-based evaluation described in the paper [Regular-expression derivatives re-examined](http://people.cs.uchicago.edu/~jhr/papers/2009/jfp-re-derivatives.pdf) by Scott Owens, John Reppy, and Aaron Turon.
+A Scala regular expression implementation with derivative-based evaluation described in the
+paper [Regular-expression derivatives re-examined](http://people.cs.uchicago.edu/~jhr/papers/2009/jfp-re-derivatives.pdf)
+by Scott Owens, John Reppy, and Aaron Turon.
 
 Normalizing constructor approach inspired from [this Scheme implementation](https://github.com/tmmcguire/scheme-regular-expression-derivatives/blob/master/dre.scm)
 
@@ -10,7 +12,13 @@ Normalizing constructor approach inspired from [this Scheme implementation](http
 
 Goals
 -----
-The main goal is to provide a regex library that supports regular operations that are usually absent (e.g., intersection) and avoids backtracking and extra-regular features (e.g., back matching) to avoid exponential blowups. While the Thompson caching NFA construction is a well-known way to achieve this, the state space can get large and it is not necessary to construct an automaton to perform matching using derivatives.
+The main goal is to provide a regex library that supports regular operations that are usually absent (e.g., intersection)
+and avoids backtracking and extra-regular features (e.g., back matching) to avoid pathological cases. While the 
+Thompson caching NFA construction is a well-known way to achieve this, the state space can get large, and it is not 
+necessary to construct an automaton to perform matching using derivatives. Moreover, it can be seen that the DFA-construction
+algorithm uses the `RegexAST.derive` method to essentially discover all the unique derivation paths from the original expression,
+which is much more work than deriving on a single input string in typical scenarios. For this reason, `RE2DFA.apply` is
+provided to produce a DFA from a `RegexAST` but is not part of the default compilation chain in `RegExpr.apply`.
 
 Features
 -------
