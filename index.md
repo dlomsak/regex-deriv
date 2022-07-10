@@ -1,37 +1,33 @@
-## Welcome to GitHub Pages
+## Regex-deriv
+This is a passion project that is the result of the practical uses I've had for regular expressions over the years, the downsides with PCRE-based implementations (which are often the standard), and my admiration of the elegance of regex derivatives. I intend to make the implementation performant and document the challenges I have run into in doing so to serve as the sort of guide I wish I had at the start.
 
-You can use the [editor on GitHub](https://github.com/dlomsak/regex-deriv/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+### Basic Usage
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+The `apply` method of the `RegExpr` object is the main entry point to the library, which tokenizes and parses a given regex string into an AST representing that expression.
 
-### Markdown
+```scala
+// compile a regex, returns Either[RegexCompilationError, RegexAST]
+val ast = RegExpr("[a-zA-Z0-9]+").right.get
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+ast.matches("a") // returns true
+ast.matches("alpha123") // returns true
+ast.matches("") // returns false
+ast.matches(";") // returns false
 ```
 
-For more details see [Basic writing and formatting syntax](https://docs.github.com/en/github/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax).
+ASTs can also be applied to strings to compute the derivative expression from that character sequence. Any time that `RegexAST.acceptsEmpty` returns ` true`, the derived sequence of input characters up to that point represents a string that is accepted by the regular expression.
 
-### Jekyll Themes
+```scala
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/dlomsak/regex-deriv/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+ast.acceptsEmpty // returns false because our original expression accepts length > 0 strings due to + operator
+ast("a").acceptsEmpty // returns true
+ast("alpha123").acceptsEmpty // returns true
+```
 
-### Support or Contact
+When we have consumed a series of characters that take us out of the language (that is, no strings with this prefix can match the orignal expression), the result is NullAST representing the null language.
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+```scala
+
+ast(";") // returns NullAST
+```
+
