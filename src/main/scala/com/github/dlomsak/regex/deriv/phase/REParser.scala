@@ -56,11 +56,11 @@ object REParser extends Parsers {
       case r ~ None => r
   }
 
-  def identifier(implicit ctx: ParseContext): Parser[String] = literal ~ rep(singleChar) ^^ { case c ~ cs => (c :: cs).map(_.c).mkString("") }
+  def identifier(implicit ctx: ParseContext): Parser[String] = charLiteral ~ rep(singleLiteral) ^^ { case c ~ cs => (c :: cs).map(_.c).mkString("") }
 
   def base(implicit ctx: ParseContext): Parser[RegexAST] =
-    singleChar |
-    (BACKSLASH ~> literal flatMap doEscape) |
+    singleLiteral |
+    (BACKSLASH ~> charLiteral flatMap doEscape) |
     DOT ^^ { _ => CharClassAST.sigma } |
     charClass |
     LPAREN ~> regex <~ RPAREN ^^ { case r => r } |
@@ -88,19 +88,21 @@ object REParser extends Parsers {
       { case invert ~ chars => CharClassAST(chars.reduce(_ ++ _), invert.isDefined) }
 
   def charRange(implicit ctx: ParseContext): Parser[Set[Char]] = {
-    literal ~ DASH ~ literal ^^ { case start ~ _ ~ stop => Set(start.c to stop.c:_*) } |
-    singleChar ^^ { ch => Set(ch.c) }
+    anyLiteral ~ DASH ~ anyLiteral ^^ { case start ~ _ ~ stop => Set(start.c to stop.c:_*) } |
+    singleLiteral ^^ { ch => Set(ch.c) }
   }
 
-  def singleChar(implicit ctx: ParseContext): Parser[CharAST] =
+  def singleLiteral(implicit ctx: ParseContext): Parser[CharAST] =
     BACKSLASH ~> meta ^^ { x => CharAST(x.asChar) } |
-    literal |
+    charLiteral |
     digitLiteral
 
   def meta(implicit ctx: ParseContext): Parser[RegexToken] =
     LPAREN | RPAREN | LBRACKET | RBRACKET | LANGLE | RANGLE | PLUS | STAR | HOOK | BACKSLASH | DOT | CARET | DASH | LBRACE | RBRACE | COMMA
 
-  def literal(implicit ctx: ParseContext): Parser[CharAST] = accept("character literal", { case _ @ CHARLIT(c) => CharAST(c) })
+  def anyLiteral(implicit ctx: ParseContext): Parser[CharAST] = charLiteral | digitLiteral
+
+  def charLiteral(implicit ctx: ParseContext): Parser[CharAST] = accept("character literal", { case _ @ CHARLIT(c) => CharAST(c) })
 
   def digitLiteral(implicit ctx: ParseContext): Parser[CharAST] = accept("digit lit", { case _ @ DIGITLIT(x) => CharAST(x) })
 
