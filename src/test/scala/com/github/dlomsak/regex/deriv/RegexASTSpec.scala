@@ -5,14 +5,14 @@ class RegexASTSpec extends BaseSpec {
 
   "CatAST" should "combine when nested" in {
     forAll { (r1: RegexAST, r2: RegexAST, r3: RegexAST) =>
-      CatAST(List(CatAST(List(r1, r2)), r3)) should equal (CatAST(List(r1, r2, r3)))
+      CatAST(CatAST(r1, r2), r3) should equal (CatAST(r1, r2, r3))
     }
   }
 
   it should "not generally commute over equality" in {
     forAll { (r1: RegexAST, r2: RegexAST) =>
       whenever(!r1.acceptsEmpty && !r1.isNull && !r2.acceptsEmpty && !r2.isNull && r1 != r2) {
-        CatAST(List(r1, r2)) should not equal CatAST(List(r2, r1))
+        CatAST(r1, r2) should not equal CatAST(r2, r1)
       }
     }
   }

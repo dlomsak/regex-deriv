@@ -181,7 +181,7 @@ final class CatAST(val children: List[RegexAST]) extends RegexAST {
       rest = rest.tail
       drvs = CatAST(curr.derive(c) :: rest) :: drvs
     }
-    drvs.foldLeft(EmptyAST: RegexAST)((acc, r) => OrAST(r, acc))
+    drvs.foldLeft(NullAST: RegexAST)((acc, r) => OrAST(r, acc))
   }
 }
 
