@@ -10,7 +10,7 @@ Normalizing constructor approach inspired from [this Scheme implementation](http
 
 Goals
 -----
-The main goal is to provide a regex library that supports regular operations that are usually absent (e.g., intersection) and avoids backtracking and extra-regular features (e.g., back matching) to avoid exponential blowups. While the Thompson caching NFA construction is a well-known way to achieve this, the state space can get large.
+The main goal is to provide a regex library that supports regular operations that are usually absent (e.g., intersection) and avoids backtracking and extra-regular features (e.g., back matching) to avoid exponential blowups. While the Thompson caching NFA construction is a well-known way to achieve this, the state space can get large and it is not necessary to construct an automaton to perform matching using derivatives.
 
 Features
 -------
