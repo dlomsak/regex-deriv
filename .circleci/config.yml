@@ -45,3 +45,5 @@ jobs:
 
       # run tests!
       - run: cat /dev/null | sbt test:test
+      - store_test_results:
+          path: target/test-reports
