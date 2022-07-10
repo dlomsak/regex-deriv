@@ -50,7 +50,7 @@ object RE2DFA {
             ccls.chars.map(_.toInt + 1).map(_.toChar).find(!ccls.chars.contains(_)).get
           }
           val qc = state.derive(c)
-          val qcExist = states.find(_.equals(qc))
+          val qcExist = states.find(_ == qc)
           // if derived state exists, add transition and move on with remaining work, otherwise explore derived state
           if (qcExist.nonEmpty) {
             explore(states, delta + ((state, ccls) -> qcExist.get), ws)

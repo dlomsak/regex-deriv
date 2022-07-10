@@ -38,9 +38,6 @@ sealed trait RegexAST {
    * returns the character equivalnce classes per section 4.2
    */
   def getCharClasses: Set[CharClassAST]
-
-  // determine whether two expressions are equivalent
-  def equivalent(other: RegexAST): Boolean
 }
 
 // AST of regex matching no strings
@@ -53,11 +50,6 @@ case object NullAST extends RegexAST {
   val getCharClasses: Set[CharClassAST] = Set(CharClassAST.sigma)
 
   override def derive(c: Char): RegexAST = NullAST
-
-  override def equivalent(other: RegexAST): Boolean = other match {
-    case NullAST => true
-    case _ => false
-  }
 }
 
 // AST of regex matching exactly the empty string
@@ -69,11 +61,6 @@ case object EmptyAST extends RegexAST {
   val getCharClasses: Set[CharClassAST] = Set(CharClassAST.sigma)
 
   override def derive(c: Char): RegexAST = EmptyAST
-
-  override def equivalent(other: RegexAST): Boolean = other match {
-    case EmptyAST => true
-    case _ => false
-  }
 }
 
 // Complement of another AST
@@ -83,18 +70,13 @@ final class ComplementAST(val re: RegexAST) extends RegexAST {
   val getCharClasses: Set[CharClassAST] = re.getCharClasses
 
   override def equals(o: scala.Any): Boolean = o match {
-    case ComplementAST(r2) => r2.equivalent(r2)
+    case ComplementAST(r2) => re == r2
     case _ => false
   }
 
   override def toString: String = s"ComplementAST($re)"
 
   override def derive(c: Char): RegexAST = ComplementAST(re.derive(c))
-
-  override def equivalent(other: RegexAST): Boolean = other match {
-    case ComplementAST(r) => r.equivalent(re)
-    case _ => false
-  }
 }
 
 object ComplementAST {
@@ -112,18 +94,13 @@ final class OrAST(val left: RegexAST, val right: RegexAST) extends RegexAST {
   val getCharClasses: Set[CharClassAST] = CharClassAST.conjunction(left.getCharClasses, right.getCharClasses)
 
   override def equals(o: Any): Boolean = o match {
-    case o: RegexAST => this.equivalent(o)
+    case OrAST(l, r) => left == l && right == r || left == r && right == l
     case _ => false
   }
 
   override def toString: String = s"OrAST($left, $right)"
 
   override def derive(c: Char): RegexAST = OrAST(left.derive(c), right.derive(c))
-
-  override def equivalent(other: RegexAST): Boolean = other match {
-    case OrAST(l, r) => left.equivalent(l) && right.equivalent(r) || left.equivalent(r) && right.equivalent(l)
-    case _ => false
-  }
 }
 
 /*
@@ -149,17 +126,13 @@ final class AndAST(val left: RegexAST, val right: RegexAST) extends RegexAST {
   val getCharClasses: Set[CharClassAST] = CharClassAST.conjunction(left.getCharClasses, right.getCharClasses)
 
   override def equals(o: Any): Boolean = o match {
-    case o: RegexAST => this.equivalent(o)
+    case AndAST(l, r) => left == l && right == r || left == r && right == l
     case _ => false
   }
 
   override def toString: String = s"AndAST($left, $right)"
 
   override def derive(c: Char): RegexAST = AndAST(left.derive(c), right.derive(c))
-
-  override def equivalent(other: RegexAST): Boolean = other match {
-    case AndAST(l, r) => left.equivalent(l) && right.equivalent(r) || left.equivalent(r) && right.equivalent(l)
-  }
 }
 
 object AndAST {
@@ -192,7 +165,8 @@ final class CatAST(val children: List[RegexAST]) extends RegexAST {
   }
 
   override def equals(o: Any): Boolean = o match {
-    case o: RegexAST => this.equivalent(o)
+    case CatAST(otherChildren) if children.size == otherChildren.size =>
+      children.zip(otherChildren).forall { case (l, r) => l == r }
     case _ => false
   }
 
@@ -208,13 +182,6 @@ final class CatAST(val children: List[RegexAST]) extends RegexAST {
       drvs = CatAST(curr.derive(c) :: rest) :: drvs
     }
     drvs.foldLeft(EmptyAST: RegexAST)((acc, r) => OrAST(r, acc))
-  }
-
-
-  override def equivalent(other: RegexAST): Boolean = other match {
-    case CatAST(otherChildren) if children.size == otherChildren.size =>
-      children.zip(otherChildren).forall { case (l, r) => l.equivalent(r) }
-    case _ => false
   }
 }
 
@@ -253,18 +220,13 @@ final class StarAST(val re: RegexAST) extends RegexAST {
   val getCharClasses: Set[CharClassAST] = re.getCharClasses
 
   override def equals(o: scala.Any): Boolean = o match {
-    case StarAST(r2) => re.equivalent(r2)
+    case StarAST(r2) => re == r2
     case _ => false
   }
 
   override def toString: String = s"StarAST($re)"
 
   override def derive(c: Char): RegexAST = CatAST(List(re.derive(c), this))
-
-  override def equivalent(other: RegexAST): Boolean = other match {
-    case StarAST(r) => r.equivalent(re)
-    case _ => false
-  }
 }
 
 object StarAST {
@@ -285,8 +247,6 @@ final case class CharAST(c: Char) extends RegexAST {
   val getCharClasses: Set[CharClassAST] = Set(CharClassAST(Set(c), inverted = false), CharClassAST(Set(c), inverted = true))
 
   override def derive(cin: Char): RegexAST = if (c==cin) EmptyAST else NullAST
-
-  override def equivalent(other: RegexAST): Boolean = this == other
 }
 
 final case class CharClassAST(chars: Set[Char], inverted: Boolean) extends RegexAST {
@@ -319,8 +279,6 @@ final case class CharClassAST(chars: Set[Char], inverted: Boolean) extends Regex
     val isMatch = if (inverted) !isMember else isMember
     if (isMatch) EmptyAST else NullAST
   }
-
-  override def equivalent(other: RegexAST): Boolean = this == other
 }
 
 object CharClassAST {
