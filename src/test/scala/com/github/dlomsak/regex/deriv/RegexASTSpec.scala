@@ -36,16 +36,16 @@ class RegexASTSpec extends BaseSpec {
   }
 
   "escaped character classes" should "match appropriate characters" in {
-    RegExpr("\\d").right.get.accepts("5") shouldBe true
-    RegExpr("\\D").right.get.accepts("5") shouldBe false
-    RegExpr("\\w").right.get.accepts("b") shouldBe true
-    RegExpr("\\W").right.get.accepts("b") shouldBe false
-    RegExpr("\\s").right.get.accepts(" ") shouldBe true
-    RegExpr("\\S").right.get.accepts(" ") shouldBe false
-    RegExpr("\\v").right.get.accepts("\r") shouldBe true
-    RegExpr("\\V").right.get.accepts("\r") shouldBe false
-    RegExpr("\\h").right.get.accepts("\t") shouldBe true
-    RegExpr("\\H").right.get.accepts("\t") shouldBe false
+    RegExpr("\\d").right.get.matches("5") shouldBe true
+    RegExpr("\\D").right.get.matches("5") shouldBe false
+    RegExpr("\\w").right.get.matches("b") shouldBe true
+    RegExpr("\\W").right.get.matches("b") shouldBe false
+    RegExpr("\\s").right.get.matches(" ") shouldBe true
+    RegExpr("\\S").right.get.matches(" ") shouldBe false
+    RegExpr("\\v").right.get.matches("\r") shouldBe true
+    RegExpr("\\V").right.get.matches("\r") shouldBe false
+    RegExpr("\\h").right.get.matches("\t") shouldBe true
+    RegExpr("\\H").right.get.matches("\t") shouldBe false
   }
 
 }
