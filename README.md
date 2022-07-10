@@ -20,6 +20,10 @@ algorithm uses the `RegexAST.derive` method to essentially discover all the uniq
 which is much more work than deriving on a single input string in typical scenarios. For this reason, `RE2DFA.apply` is
 provided to produce a DFA from a `RegexAST` but is not part of the default compilation chain in `RegExpr.apply`.
 
+Documentation
+-------------
+An overview of the library and more detailed writings about its design can be found [here](https://dlomsak.github.io/regex-deriv/)
+
 Features
 -------
 * Character classes:
