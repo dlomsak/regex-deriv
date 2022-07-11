@@ -1,4 +1,3 @@
-## Regex-deriv
 This is a passion project that is the result of the practical uses I've had for regular expressions over the years, the downsides with PCRE-based implementations (which are often the standard), and my admiration of the elegance of regex derivatives. I intend to make the implementation performant and document the challenges I have run into in doing so to serve as the sort of guide I wish I had at the start.
 
 ### Basic Usage
