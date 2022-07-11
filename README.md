@@ -45,4 +45,4 @@ Features
 * DFA construction from regular expression
   * Matching of input strings against DFA
   * GraphViz Dot representation of DFA which can be rendered with appropriate tooling
-
+* String generation from DFA
