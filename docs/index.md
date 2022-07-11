@@ -15,7 +15,7 @@ ast.matches("") // returns false
 ast.matches(";") // returns false
 ```
 
-ASTs can also be applied to strings to compute the derivative expression from that character sequence. Any time that `RegexAST.acceptsEmpty` returns ` true`, the derived sequence of input characters up to that point represents a string that is accepted by the regular expression.
+ASTs can also be applied to strings to compute the derivative expression from that character sequence. Any time that `RegexAST.acceptsEmpty` returns `true`, the derived sequence of input characters up to that point represents a string that is accepted by the regular expression.
 
 ```scala
 ast.acceptsEmpty // returns false because our original expression accepts length > 0 strings due to + operator
