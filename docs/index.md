@@ -32,9 +32,9 @@ ast(";") // returns NullAST
 ### String Generation
 
 The DFA has a `getStrings` method that returns a `Stream[String]` containing values that are in the language. The stream will be endless if
-the language is infinite, but the strings are emitted in shortest-path order. Not every string will be emitted, wildcard characters will
-simply generate a single default character and inverted character classes (e.g., [^abc]) will generate a single character outside the
-inverted characters (e.g., 'd'). Any finite classes of characters will be enumerated in full.
+the language is infinite, but the strings are emitted in shortest-path order. Not every string will be emitted: wildcard characters will
+simply generate a single default character, and inverted character classes (e.g., [^abc]) will generate a single character outside the
+given characters (e.g., 'd'). Any finite class of characters will be enumerated in full.
 
 What is powerful about intersection, complementation, and generation together is that you can generate strings adhering to a 
 number of constraints by describing each constraint individually and generating strings from their combination. For example:
@@ -44,12 +44,15 @@ val emailTemplate = "[a-zA-Z0-9]+@.+"
 val nonNumberStart = "(~(\\d.*))" // the strings that don't begin with a digit, including the empty string
 val emailDomains = ".*@[a-zA-Z]+\\.(com|net|[a-zA-Z][a-zA-Z0-9]\\.co\\.uk|[a-z]+\\.edu)"
 val emailLength = ".{10}"
-val dfa = RE2DFA(RegExpr(s"$emailTemplate&$nonNumberStart&$emailDomains&$emailLength").right.get)
+val singleAt = "[^@]*@[^@]*"
+val emailFull = s"$emailTemplate&$nonNumberStart&$emailDomains&$emailLength&$singleAt"
+val dfa = RE2DFA(RegExpr(emailFull).right.get)
 val testOutputs = dfa.getStrings.take(1000)
 dfa.accepts("a@test.com") // true
 dfa.accepts("ab@test.com") // false; > 10 characters
 testOutputs.forall(_.length == 10) // true
-testOutputs.forall(_.contains("@")) // true
+testOutputs.forall(_.count(_=='@') == 1) // true
 testOutputs.exists(_.head.isDigit) // false
 testOutputs.forall(s => s.endsWith(".com") || s.endsWith(".net") || s.endsWith(".co.uk") || s.endsWith(".edu")) // true
 ```
+The first string emitted by the above is `A@AA.n.edu` which has the intended structure.
