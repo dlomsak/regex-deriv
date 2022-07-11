@@ -70,8 +70,6 @@ final class ComplementAST(val re: RegexAST) extends RegexAST {
 object ComplementAST {
   def apply(re: RegexAST): RegexAST = re match {
     case ComplementAST(r) => r
-    case NullAST => EmptyAST
-    case EmptyAST => NullAST
     case _ => new ComplementAST(re)
   }
 

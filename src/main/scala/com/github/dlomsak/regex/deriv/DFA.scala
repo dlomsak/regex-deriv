@@ -60,7 +60,11 @@ class DFA[A] private (val states: Set[A], val init: A, accepting: Set[A], slowDe
       case cls if cls.chars.isEmpty => Stream('X')
       case cls => Stream(cls.chars.map(_.toInt + 1).map(_.toChar).find(!cls.chars.contains(_)).get)
     }
-    mkStringCombinations(charStreams.head.map(x => Stream(x)), charStreams.tail).map(_.mkString(""))
+    if (charStreams.isEmpty) {
+      Stream("")
+    } else {
+      mkStringCombinations(charStreams.head.map(x => Stream(x)), charStreams.tail).map(_.mkString(""))
+    }
   }
 
   @tailrec

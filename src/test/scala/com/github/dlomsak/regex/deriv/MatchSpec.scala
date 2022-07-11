@@ -3,12 +3,12 @@ package com.github.dlomsak.regex.deriv
 // test specific matching behaviors
 class MatchSpec extends BaseSpec {
   "complementation" should "match correctly" in {
-    val ast = RegExpr("(~a)*").right.get
-    ast.matches("") shouldBe true
+    val ast = RegExpr("~(a*)").right.get
+    ast.matches("") shouldBe false // the empty string is in a*
     ast.matches("a") shouldBe false
     ast.matches("b") shouldBe true
     ast.matches("bbbbbbb") shouldBe true
-    ast.matches("bbbbbabb") shouldBe false
+    ast.matches("bbbbbabb") shouldBe true
     ast.matches(";.@") shouldBe true
   }
 

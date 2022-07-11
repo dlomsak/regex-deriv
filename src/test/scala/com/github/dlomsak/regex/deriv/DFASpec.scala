@@ -5,7 +5,7 @@ import com.github.dlomsak.regex.deriv.phase.{ParseContext, RE2DFA}
 class DFASpec extends BaseSpec {
   "DFA" should "match equivalently to RegexAST" in {
     forAll { (r: RegexAST) =>
-      val dfa = RE2DFA(r, new ParseContext())
+      val dfa = RE2DFA(r)
       forAll { (s: String) =>
         r.matches(s) shouldEqual dfa.accepts(s)
       }
@@ -17,7 +17,7 @@ class DFASpec extends BaseSpec {
       i <- 0 to 9
       j <- 0 to 9
     } yield s"$i$j"
-    val dfa = RE2DFA(RegExpr("[a-zA-Z0-9]{2}&\\d*").right.get, new ParseContext)
+    val dfa = RE2DFA(RegExpr("[a-zA-Z0-9]{2}&\\d*").right.get)
     dfa.getStrings.toList shouldBe twoDigits
   }
 

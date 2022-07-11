@@ -61,7 +61,7 @@ object RE2DFA {
     }
   }
 
-  private def mkDFA(r: RegexAST, ctx: ParseContext): DFA[Int] = {
+  private def mkDFA(r: RegexAST): DFA[Int] = {
     val (states, delta) = explore(Set(r), Map.empty, List(ExploreState(r)))
     val accepting = states.filter(_.acceptsEmpty)
     // label states numerically rather than by regex
@@ -73,5 +73,5 @@ object RE2DFA {
     DFA(nStates.values.toSet, nStates(r), accepting.map(nStates), nDeltaSt)
   }
 
-  def apply(r: RegexAST, ctx: ParseContext): DFA[Int] = mkDFA(r, ctx)
+  def apply(r: RegexAST): DFA[Int] = mkDFA(r)
 }

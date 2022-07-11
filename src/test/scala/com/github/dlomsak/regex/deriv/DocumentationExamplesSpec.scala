@@ -30,15 +30,22 @@ class DocumentationExamplesSpec extends BaseSpec {
   }
 
   it should "generate all emails" in {
-    val emailTemplate = "[a-zA-Z][a-zA-Z0-9]*@.+"
+    val emailTemplate = "[a-zA-Z0-9]+@.+"
+    val nonNumberStart = "(~(\\d.*))" // the strings that don't begin with a digit, including the empty string
     val emailDomains = ".*@[a-zA-Z]+\\.(com|net|[a-zA-Z][a-zA-Z0-9]\\.co\\.uk|[a-z]+\\.edu)"
     val emailLength = ".{10}"
-    val dfa = RE2DFA(RegExpr(s"$emailTemplate&$emailDomains&$emailLength").right.get, new ParseContext)
+    val dfa = RE2DFA(RegExpr(s"$emailTemplate&$nonNumberStart&$emailDomains&$emailLength").right.get)
     val testOutputs = dfa.getStrings.take(1000)
     dfa.accepts("a@test.com") shouldBe true
     dfa.accepts("ab@test.com") shouldBe false // too long
     testOutputs.forall(_.length == 10) shouldBe true
     testOutputs.forall(_.contains("@")) shouldBe true
+    testOutputs.exists(_.head.isDigit) shouldBe false
     testOutputs.forall(s => s.endsWith(".com") || s.endsWith(".net") || s.endsWith(".co.uk") || s.endsWith(".edu")) shouldBe true
+  }
+
+  it should "generate strings on an infinite language" in {
+    val dfa = RE2DFA(RegExpr("a*").right.get)
+    dfa.getStrings.take(5).toList shouldBe List("", "a", "aa", "aaa", "aaaa")
   }
 }
