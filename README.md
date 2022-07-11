@@ -20,7 +20,9 @@ necessary to construct an automaton to perform matching using derivatives, and d
 is trivial. Moreover, it can be seen that the DFA-construction
 algorithm uses the `RegexAST.derive` method to essentially discover all the unique derivation paths from the original expression,
 which is much more work than deriving on a single input string in typical scenarios. For this reason, `RE2DFA.apply` is
-provided to produce a DFA from a `RegexAST` but is not part of the default compilation chain in `RegExpr.apply`.
+provided to produce a DFA from a `RegexAST` but is not part of the default compilation chain in `RegExpr.apply`. However,
+string generation is more convenient to perform on the DFA, so it implements `Iterator[String]` which emits the strings
+that the DFA accepts via a breadth-first search.
 
 Documentation
 -------------

@@ -1,16 +1,23 @@
 package com.github.dlomsak.regex.deriv
 
+import scala.annotation.tailrec
+
 /**
   * A deterministic finite automaton with abstract labeling. Initially, DFA states are labeled with regexes, but we
   * later resolve them to integers for efficiency.
   */
-class DFA[A] private (val states: Set[A], val init: A, accepting: Set[A], slowDelta: Map[A, List[(CharClassAST, A)]], delta: Map[A, Map[Char, A]]) {
-  final def accepts(s: String):Boolean = {
+class DFA[A] private (val states: Set[A], val init: A, accepting: Set[A], slowDelta: Map[A, List[(CharClassAST, A)]], delta: Map[A, Map[Char, A]])  {
+
+  final def accepts(s: String): Boolean = {
     val finalState = s.foldLeft(init)(delta(_)(_))
     accepting.contains(finalState)
   }
 
-  def isAccepting = accepting.contains(init)
+  def isDeadEnd(state: A): Boolean = {
+    !accepting.contains(state) && slowDelta(state) == List((CharClassAST.sigma, state))
+  }
+
+  def isAccepting: Boolean = accepting.contains(init)
 
   // Generates a visualizable description of the DFA; to be fed in to GraphViz/Dot
   final def toDot: String = {
@@ -26,27 +33,66 @@ class DFA[A] private (val states: Set[A], val init: A, accepting: Set[A], slowDe
           s"$prefix$transChars"
         val label = s"$symLabel"
         s"""$state -> $toState [ label = \"$label\" ];"""
-      }  mkString "\n"
+      } mkString "\n"
     } mkString "\n"
     s"""digraph dfa {
-        |node [color = white] "";
-        |node [shape = doublecircle, color = black]; ${accepting.mkString(" ")};
-        |node [shape = circle];
-        |"" -> $init;
-        |$body
-        |}
+       |node [color = white] "";
+       |node [shape = doublecircle, color = black]; ${accepting.mkString(" ")};
+       |node [shape = circle];
+       |"" -> $init;
+       |$body
+
+       |}
      """.stripMargin
   }
 
   // emit a new DFA supposing character c was consumed (only init may differ)
-  def consume(c: Char): DFA[A]= {
+  def consume(c: Char): DFA[A] = {
     val toState = delta(init)(c)
     new DFA(states, toState, accepting, slowDelta, delta)
   }
 
   def apply(s: String): DFA[A] = s.foldLeft(this)((dfa, c) => dfa.consume(c))
-}
 
+  private def genStrings(cclss: List[CharClassAST]): Stream[String] = {
+    val charStreams = cclss.toStream.map {
+      case cls if !cls.inverted => cls.chars.toList.sorted.toStream
+      case cls if cls.chars.isEmpty => Stream('X')
+      case cls => Stream(cls.chars.map(_.toInt + 1).map(_.toChar).find(!cls.chars.contains(_)).get)
+    }
+    mkStringCombinations(charStreams.head.map(x => Stream(x)), charStreams.tail).map(_.mkString(""))
+  }
+
+  @tailrec
+  private def mkStringCombinations(acc: Stream[Stream[Char]], rest: Stream[Stream[Char]]): Stream[Stream[Char]] = {
+    if (rest.isEmpty) {
+      acc
+    } else {
+      val comb = for {
+        x <- rest.head
+        a <- acc
+      } yield x #:: a
+      mkStringCombinations(comb, rest.tail)
+    }
+  }
+
+  def getStrings: Stream[String] = getRightContext(List((init, Nil)))
+
+  private def getRightContext(statePaths: List[(A, List[CharClassAST])]): Stream[String] = {
+    if (statePaths.isEmpty) {
+      Stream.empty
+    } else {
+      val acceptingPaths = statePaths.filter(s => accepting.contains(s._1)).map(_._2)
+      val acceptingStrings = acceptingPaths.toStream.flatMap(genStrings)
+      val nextStatePaths = statePaths flatMap { case (sFrom, cclss) =>
+        slowDelta(sFrom) map { case (ccls, sTo) =>
+          (sTo, ccls :: cclss)
+        }
+      }
+      acceptingStrings #::: getRightContext(nextStatePaths.filterNot(x => isDeadEnd(x._1)))
+    }
+  }
+}
 
 object DFA {
   def apply[A](states: Set[A], init: A, accepting: Set[A], delta: Map[A, List[(CharClassAST, A)]]): DFA[A] = {

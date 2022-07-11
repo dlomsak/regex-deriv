@@ -2,21 +2,13 @@ package com.github.dlomsak.regex.deriv
 
 import com.github.dlomsak.regex.deriv
 
+import scala.annotation.tailrec
+
 sealed trait RegexAST {
     /**
     * denotes whether the regex matches the empty string (helper function for eval and derive)
     */
   val acceptsEmpty: Boolean
-
-  /**
-    * denotes whether the node is EmptyAST (used for convenience in property tests)
-    */
-  val isEmpty: Boolean = false
-
-  /**
-    * denotes whether the node is NullAST (used for convenience in property tests)
-    */
-  val isNull: Boolean = false
 
   /**
    * Computes the derivative of a regex with respect to a single character. That is, the regex that matches the
@@ -30,9 +22,9 @@ sealed trait RegexAST {
   def matches(input: String): Boolean = this(input).acceptsEmpty
 
   /**
-    * perform derivation on the expression for a string of characters
-    */
-  def apply(input: String) = input.foldLeft(this)((r, c) => r.derive(c))
+   * perform derivation on the expression for a string of characters
+   */
+  def apply(input: String): RegexAST = input.foldLeft(this)((r, c) => r.derive(c))
 
   /*
    * returns the character equivalnce classes per section 4.2
@@ -45,8 +37,6 @@ case object NullAST extends RegexAST {
 
   override val acceptsEmpty: Boolean = false
 
-  override val isNull: Boolean = true
-
   val getCharClasses: Set[CharClassAST] = Set(CharClassAST.sigma)
 
   override def derive(c: Char): RegexAST = NullAST
@@ -55,8 +45,6 @@ case object NullAST extends RegexAST {
 // AST of regex matching exactly the empty string
 case object EmptyAST extends RegexAST {
   override val acceptsEmpty: Boolean = true
-
-  override val isEmpty: Boolean = true
 
   val getCharClasses: Set[CharClassAST] = Set(CharClassAST.sigma)
 
@@ -194,11 +182,11 @@ object CatAST {
 
   def apply(children: List[RegexAST]): RegexAST = {
     // if any child is null, the whole catenation is null
-    if (children.exists(_.isNull)) {
+    if (children.contains(NullAST)) {
       NullAST
     } else {
       // EmptyAST children have no effect in a catenation
-      val neChildren = children.filterNot(_.isEmpty)
+      val neChildren = children.filterNot(_ == EmptyAST)
       if (neChildren.isEmpty) {
         EmptyAST
       } else if (neChildren.size == 1) {
@@ -285,16 +273,16 @@ final case class CharClassAST(chars: Set[Char], inverted: Boolean) extends Regex
 
 object CharClassAST {
   val sigma: CharClassAST = CharClassAST(Set.empty, inverted = true)
-  val digit: CharClassAST = CharClassAST(('0' to '9').toSet, false)
-  val nonDigit = digit.copy(inverted = true)
-  val horWS = deriv.CharClassAST("\t\u1680\u180e\u202f\u205f\u3000".toSet ++ ('\u2000' to '\u200a'), false) //\xA0
-  val nonHorWS = horWS.copy(inverted = true)
-  val ws = CharClassAST(" \t\n\f\r".toSet, false) // x0B
-  val nonWS = ws.copy(inverted = true)
-  val vertWS = deriv.CharClassAST("\n\f\r\u2028\u2029".toSet, false)// x0B x85
-  val nonVertWS = vertWS.copy(inverted = true)
-  val word = CharClassAST(digit.chars ++ ('a' to 'z').toSet ++ ('A' to 'Z').toSet + '_', false)
-  val nonWord = word.copy(inverted = true)
+  val digit: CharClassAST = CharClassAST(('0' to '9').toSet, inverted = false)
+  val nonDigit: CharClassAST = digit.copy(inverted = true)
+  val horWS: CharClassAST = deriv.CharClassAST("\t\u1680\u180e\u202f\u205f\u3000".toSet ++ ('\u2000' to '\u200a'), inverted = false) //\xA0
+  val nonHorWS: CharClassAST = horWS.copy(inverted = true)
+  val ws: CharClassAST = CharClassAST(" \t\n\f\r".toSet, inverted = false) // x0B
+  val nonWS: CharClassAST = ws.copy(inverted = true)
+  val vertWS: CharClassAST = deriv.CharClassAST("\n\f\r\u2028\u2029".toSet, inverted = false)// x0B x85
+  val nonVertWS: CharClassAST = vertWS.copy(inverted = true)
+  val word: CharClassAST = CharClassAST(digit.chars ++ ('a' to 'z').toSet ++ ('A' to 'Z').toSet + '_', inverted = false)
+  val nonWord: CharClassAST = word.copy(inverted = true)
 
   def conjunction(left: Set[CharClassAST], right: Set[CharClassAST]): Set[CharClassAST] = left flatMap { x =>
     right.map(_.intersect(x))

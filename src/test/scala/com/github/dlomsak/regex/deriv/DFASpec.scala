@@ -12,6 +12,15 @@ class DFASpec extends BaseSpec {
     }
   }
 
+  it should "generate all strings in a finite language" in {
+    val twoDigits = for {
+      i <- 0 to 9
+      j <- 0 to 9
+    } yield s"$i$j"
+    val dfa = RE2DFA(RegExpr("[a-zA-Z0-9]{2}&\\d*").right.get, new ParseContext)
+    dfa.getStrings.toList shouldBe twoDigits
+  }
+
   /*it should "not crash with long expressions" in {
     RegExpr("a"*5000).right.get.states.size shouldBe 5001
   }*/

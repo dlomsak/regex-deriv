@@ -11,7 +11,7 @@ class RegexASTSpec extends BaseSpec {
 
   it should "not generally commute over equality" in {
     forAll { (r1: RegexAST, r2: RegexAST) =>
-      whenever(!r1.acceptsEmpty && !r1.isNull && !r2.acceptsEmpty && !r2.isNull && r1 != r2) {
+      whenever(!r1.acceptsEmpty && (r1 != NullAST) && !r2.acceptsEmpty && (r2 != NullAST) && (r1 != r2)) {
         CatAST(r1, r2) should not equal CatAST(r2, r1)
       }
     }
