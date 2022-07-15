@@ -1,8 +1,10 @@
+
 name := "regex-deriv"
-
+organization := "com.github.dlomsak"
 version := "0.1"
-
 scalaVersion := "2.12.16"
+
+publishMavenStyle := true
 
 libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
