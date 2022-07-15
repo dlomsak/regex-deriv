@@ -1,8 +1,10 @@
 
 name := "regex-deriv"
-organization := "com.github.dlomsak"
+organization := "io.github.dlomsak"
 version := "0.1"
 scalaVersion := "2.12.16"
+
+versionScheme := Some("strict")
 
 publishMavenStyle := true
 
