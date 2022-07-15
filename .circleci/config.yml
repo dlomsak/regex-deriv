@@ -49,4 +49,4 @@ jobs:
           path: target/test-reports
 
       # publish
-      - run: cat /dev/null | sbt publish
+      #- run: cat /dev/null | sbt publish
