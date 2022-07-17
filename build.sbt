@@ -6,7 +6,8 @@ scalaVersion := "2.12.16"
 
 versionScheme := Some("strict")
 
-publishMavenStyle := true
+ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
+ThisBuild / publishTo := sonatypePublishToBundle.value
 
 libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
@@ -14,4 +15,4 @@ libraryDependencies ++= Seq(
   "org.scalacheck" %% "scalacheck" % "1.13.4" % "test"
 )
 
-testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-u", "target/test-reports")
+Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-u", "target/test-reports")

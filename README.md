@@ -1,4 +1,5 @@
 [![CircleCI](https://circleci.com/gh/dlomsak/regex-deriv.svg?style=shield)](https://circleci.com/gh/dlomsak/regex-deriv)[![CircleCI](https://dl.circleci.com/status-badge/img/gh/dlomsak/regex-deriv/tree/master.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/dlomsak/regex-deriv/tree/master)
+![Sonatype Nexus (Releases)](https://img.shields.io/nexus/r/io.github.dlomsak/regex-deriv_2.12?server=https%3A%2F%2Fs01.oss.sonatype.org)
 
 Regex-Deriv
 ==============
