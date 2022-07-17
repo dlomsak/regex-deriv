@@ -31,6 +31,7 @@ An overview of the library and more detailed writings about its design can be fo
 
 Features
 -------
+* Typical *+?| operators, () for precedence, implicit concatenation
 * Character classes:
     * [a-zA-Z] syntax for ranges
     * [^abc] for negation
